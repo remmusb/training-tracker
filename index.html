@@ -231,7 +231,7 @@
       <div class="note" id="syncHint">配置后，打卡和体测数据自动同步到云端，手机、电脑数据一致。首次使用需在 Supabase 免费建一个项目（约3分钟）。</div>
       <div class="form-grid">
         <div><label>Supabase 项目 URL</label><input type="text" id="sbUrl" placeholder="https://xxxx.supabase.co"></div>
-        <div><label>anon public key</label><input type="password" id="sbKey" placeholder="eyJhbGciOi..."></div>
+        <div><label>Publishable / anon key</label><input type="password" id="sbKey" placeholder="sb_publishable_ 或 eyJhbGciOi..."></div>
       </div>
       <div style="padding:0 14px 14px;display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn" id="sbSave">保存并立即同步</button>
@@ -249,10 +249,11 @@
 alter table training_data enable row level security;
 create policy "anon_all" on training_data
   for all using (true) with check (true);</pre></li>
-          <li>左侧 <b>Project Settings（齿轮）→ API</b>：复制 <b>Project URL</b> 和 <b>anon public</b> key，填到上面两个输入框。</li>
-          <li>点「保存并立即同步」。之后每台设备打开页面填一次同样的两个值即可互通。</li>
+          <li>左侧菜单 <b>Settings → Integrations → Data API</b>：复制 <b>Project URL</b>（形如 https://xxxx.supabase.co）。</li>
+          <li>左侧菜单 <b>Settings → Configuration → API Keys</b>：复制 <b>Publishable key</b>（sb_publishable_ 开头；如有 Legacy keys 标签，里面的 anon public key 也可以）。</li>
+          <li>两个值填到上面的输入框，点「保存并立即同步」。之后每台设备填一次同样的两个值即可互通。</li>
         </ol>
-        <div style="margin-top:6px">说明：anon key 只对你的训练数据表有效，相当于这把锁的钥匙，不要发到公开场所。同步策略为「最后修改优先」。</div>
+        <div style="margin-top:6px">说明：publishable / anon key 只对你的训练数据表有效，相当于这把锁的钥匙，不要发到公开场所。同步策略为「最后修改优先」。</div>
       </details>
     </div>
   </section>
