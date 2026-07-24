@@ -156,6 +156,7 @@
   <div class="tabs">
     <div class="tab active" data-tab="train">🏋️ 训练打卡</div>
     <div class="tab" data-tab="diet">🍚 饮食参考</div>
+    <div class="tab" data-tab="food">🍽️ 饮食记录</div>
     <div class="tab" data-tab="body">📊 体测报告</div>
     <div class="tab" data-tab="rules">⚽ 调整与目标</div>
   </div>
@@ -173,6 +174,58 @@
       </ul>
     </div>
     <div id="dietList"></div>
+  </section>
+
+  <section id="tab-food" class="hidden">
+    <div class="card">
+      <div class="day-head" style="cursor:default">
+        <div class="l">
+          <div class="dow" id="foodDow">—</div>
+          <div class="day-title" id="foodDateLabel">—</div>
+          <div class="day-meta"><span id="foodTargetHint">—</span></div>
+        </div>
+        <div style="display:flex;gap:6px;align-self:center">
+          <button class="wk-btn" id="foodPrev" style="background:var(--bg);color:var(--ink)">‹</button>
+          <button class="wk-btn today" id="foodToday">今天</button>
+          <button class="wk-btn" id="foodNext" style="background:var(--bg);color:var(--ink)">›</button>
+        </div>
+      </div>
+      <div style="padding:0 14px 14px">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin-bottom:8px">
+          <span style="color:var(--sub)">热量目标</span>
+          <input type="number" id="foodTarget" style="width:90px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:14px">
+          <span style="color:var(--sub)">kcal（可按当天情况改）</span>
+        </div>
+        <div class="p-track" style="background:#e2e8f0;height:12px"><div class="p-fill" id="foodFill"></div></div>
+        <div style="font-size:13px;color:var(--sub);margin-top:6px" id="foodSummary">—</div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn ghost small" id="prefillBtn">📋 按今日类型模板预填餐单</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">添加记录</div>
+      <div class="form-grid">
+        <div><label>餐次</label><select id="fMeal">
+          <option>早餐</option><option>上午加餐</option><option>午餐</option><option>下午加餐</option>
+          <option>练前餐</option><option>练后餐</option><option>跑前餐</option><option>跑步补给</option>
+          <option>晚餐</option><option>睡前</option><option>其他</option>
+        </select></div>
+        <div><label>食物（可从库中选，也可自填）</label><input type="text" id="fName" list="foodNames" placeholder="如：鸡胸肉"><datalist id="foodNames"></datalist></div>
+        <div><label>数量 <span id="fUnit" style="color:var(--blue)"></span></label><input type="number" id="fQty" step="0.5" min="0.5" value="1"></div>
+        <div><label>热量 kcal（选库中食物自动算，可改）</label><input type="number" id="fKcal" placeholder="0"></div>
+      </div>
+      <div style="padding:0 14px 14px;display:flex;align-items:center;gap:12px">
+        <button class="btn" id="foodAdd">添加</button>
+        <span id="fProtein" style="font-size:12.5px;color:var(--sub)"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">当日明细</div>
+      <div id="foodList" style="padding:6px 0 10px"></div>
+    </div>
   </section>
 
   <section id="tab-body" class="hidden">
