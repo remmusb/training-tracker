@@ -7,12 +7,14 @@ function bilibili(kw){ return 'https://search.bilibili.com/all?keyword=' + encod
 
 /* ================= 状态 ================= */
 let weekOffset = 0; // 0=本周
-const CHECK_KEY='train2026_checks_v1', BODY_KEY='train2026_body_v1';
+const CHECK_KEY='train2026_checks_v1', BODY_KEY='train2026_body_v1', FOOD_KEY='train2026_food_v1';
 const store = {
   get checks(){ try{return JSON.parse(localStorage.getItem(CHECK_KEY))||{}}catch(e){return{}} },
   set checks(v){ localStorage.setItem(CHECK_KEY, JSON.stringify(v)); },
   get body(){ try{return JSON.parse(localStorage.getItem(BODY_KEY))||null}catch(e){return null} },
-  set body(v){ localStorage.setItem(BODY_KEY, JSON.stringify(v)); }
+  set body(v){ localStorage.setItem(BODY_KEY, JSON.stringify(v)); },
+  get food(){ try{return JSON.parse(localStorage.getItem(FOOD_KEY))||{logs:{},targets:{}}}catch(e){return{logs:{},targets:{}}} },
+  set food(v){ localStorage.setItem(FOOD_KEY, JSON.stringify(v)); }
 };
 // 首次写入体测基准记录
 if(!store.body){
@@ -146,7 +148,7 @@ $('#bcTable').addEventListener('click', e=>{
   const arr=store.body; arr.splice(+d.dataset.i,1); store.body=arr; changed(); renderBody();
 });
 $('#exportBtn').onclick=()=>{
-  const data = { 打卡: store.checks, 体测: store.body, 导出时间: new Date().toLocaleString('zh-CN') };
+  const data = { 打卡: store.checks, 体测: store.body, 饮食: store.food, 导出时间: new Date().toLocaleString('zh-CN') };
   const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = `训练数据_${fmt(new Date())}.json`; a.click();
@@ -202,8 +204,9 @@ window.addEventListener('resize', ()=>{ if(!$('#tab-body').classList.contains('h
 /* ================= Tab 切换 ================= */
 function switchTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
-  ['train','diet','body','rules'].forEach(n=>$('#tab-'+n).classList.toggle('hidden', n!==name));
+  ['train','diet','food','body','rules'].forEach(n=>$('#tab-'+n).classList.toggle('hidden', n!==name));
   if(name==='body') renderBody();
+  if(name==='food') renderFood();
   window.scrollTo({top:0});
 }
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchTab(t.dataset.tab));
@@ -240,7 +243,7 @@ async function pushNow(){
       method:'POST',
       headers:{ 'apikey':cfg.key, 'Authorization':'Bearer '+cfg.key,
         'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates' },
-      body: JSON.stringify({ id:'main', data:{ checks:store.checks, body:store.body, updated:meta.get().updated } })
+      body: JSON.stringify({ id:'main', data:{ checks:store.checks, body:store.body, food:store.food, updated:meta.get().updated } })
     });
     if(!res.ok) throw new Error(res.status);
     setSyncStatus('☁️ 已同步 '+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}), '#4ade80');
@@ -261,8 +264,10 @@ async function pullNow(showAlerts){
       if(ru > lu){ // 云端更新 → 覆盖本地
         localStorage.setItem(CHECK_KEY, JSON.stringify(remote.checks||{}));
         localStorage.setItem(BODY_KEY, JSON.stringify(remote.body||[]));
+        if(remote.food) localStorage.setItem(FOOD_KEY, JSON.stringify(remote.food));
         meta.set({updated:ru});
         renderTrain(); renderBody();
+        if(!$('#tab-food').classList.contains('hidden')) renderFood();
       } else if(lu > ru){ // 本地更新 → 推上去
         await pushNow(); return true;
       }
@@ -300,9 +305,10 @@ $('#importFile').addEventListener('change', e=>{
   rd.onload=()=>{
     try{
       const d=JSON.parse(rd.result);
-      if(!d.打卡 && !d.体测) throw new Error('格式不对');
+      if(!d.打卡 && !d.体测 && !d.饮食) throw new Error('格式不对');
       if(d.打卡) localStorage.setItem(CHECK_KEY, JSON.stringify(d.打卡));
       if(d.体测) localStorage.setItem(BODY_KEY, JSON.stringify(d.体测));
+      if(d.饮食) localStorage.setItem(FOOD_KEY, JSON.stringify(d.饮食));
       changed(); renderTrain(); renderBody();
       alert('导入成功');
     }catch(err){ alert('导入失败：文件格式不正确'); }
@@ -311,10 +317,145 @@ $('#importFile').addEventListener('change', e=>{
   rd.readAsText(f);
 });
 
+/* ================= 饮食记录 ================= */
+const MEAL_ORDER = ['跑前餐','早餐','跑步补给','上午加餐','午餐','下午加餐','练前餐','练后餐','晚餐','足球补给','睡前','其他'];
+const DOW_INFO = [ // 周一=0 … 周日=6
+  {name:'力量日', target:2650, dietId:'strength'},
+  {name:'跑步日', target:2850, dietId:'run'},
+  {name:'力量日', target:2650, dietId:'strength'},
+  {name:'力量日', target:2650, dietId:'strength'},
+  {name:'力量日', target:2650, dietId:'strength'},
+  {name:'恢复日', target:2250, dietId:'recovery'},
+  {name:'长距离日', target:3100, dietId:'lsd'}
+];
+let foodDate = fmt(new Date());
+
+function guessMeal(t){
+  if(/跑前/.test(t)) return '跑前餐';
+  if(/跑后|跑中/.test(t)) return '跑步补给';
+  if(/早餐/.test(t)) return '早餐';
+  if(/午餐/.test(t)) return '午餐';
+  if(/练前/.test(t)) return '练前餐';
+  if(/练后/.test(t)) return '练后餐';
+  if(/晚餐/.test(t)) return '晚餐';
+  if(/睡前/.test(t)) return '睡前';
+  if(/足球/.test(t)) return '足球补给';
+  if(/加餐/.test(t)) return '下午加餐';
+  return '其他';
+}
+
+function renderFood(){
+  const d = new Date(foodDate+'T12:00:00');
+  const dow = (d.getDay()+6)%7;
+  const info = DOW_INFO[dow];
+  const fd = store.food;
+  const entries = fd.logs[foodDate] || [];
+  const target = fd.targets[foodDate] ?? info.target;
+
+  $('#foodDow').textContent = ['周一','周二','周三','周四','周五','周六','周日'][dow] + ' · ' + info.name;
+  $('#foodDateLabel').textContent = `${d.getMonth()+1}月${d.getDate()}日`;
+  $('#foodTargetHint').textContent = `计划类型：${info.name} · 默认目标 ${info.target} kcal`;
+  $('#foodTarget').value = target;
+
+  const totK = entries.reduce((s,e)=>s+(+e.kcal||0),0);
+  const totP = entries.reduce((s,e)=>s+(+e.p||0),0);
+  const pct = target? Math.min(100, Math.round(totK/target*100)) : 0;
+  const fill = $('#foodFill');
+  fill.style.width = pct+'%';
+  fill.style.background = totK<=target ? 'linear-gradient(90deg,#4ade80,#22c55e)' : (totK<=target*1.1 ? '#f59e0b' : '#ef4444');
+  $('#foodSummary').innerHTML = `已摄入 <b style="color:var(--ink)">${Math.round(totK)}</b> / ${target} kcal（${pct}%） · 蛋白质约 <b style="color:var(--ink)">${Math.round(totP)}</b> g · 还差 <b style="color:var(--ink)">${Math.max(0,Math.round(target-totK))}</b> kcal`;
+
+  // 明细：按餐次分组
+  const groups = {};
+  entries.forEach((e,i)=>{ (groups[e.meal]=groups[e.meal]||[]).push({...e,i}); });
+  const order = [...MEAL_ORDER, ...Object.keys(groups).filter(k=>!MEAL_ORDER.includes(k))];
+  const html = order.filter(m=>groups[m]).map(m=>{
+    const sub = groups[m].reduce((s,e)=>s+(+e.kcal||0),0);
+    return `<div style="padding:8px 14px 2px;font-size:12.5px;font-weight:700;color:var(--sub)">${m} · ${Math.round(sub)} kcal</div>` +
+      groups[m].map(e=>`<div class="ex" style="cursor:default">
+        <div class="ex-info">
+          <div class="ex-name">${e.name}</div>
+          <div class="ex-meta"><b>${e.qty} × ${e.unit||'份'}</b><span>·</span>${Math.round(e.kcal)} kcal${e.p?`<span>·</span>蛋白质 ${Math.round(e.p*10)/10} g`:''}</div>
+        </div>
+        <span class="del" data-fi="${e.i}">删除</span>
+      </div>`).join('');
+  }).join('');
+  $('#foodList').innerHTML = html || '<div class="note" style="padding-top:10px">还没有记录，点上方「添加」或「按模板预填」。</div>';
+}
+
+// 日期导航
+$('#foodPrev').onclick=()=>{ const d=new Date(foodDate+'T12:00:00'); d.setDate(d.getDate()-1); foodDate=fmt(d); renderFood(); };
+$('#foodNext').onclick=()=>{ const d=new Date(foodDate+'T12:00:00'); d.setDate(d.getDate()+1); foodDate=fmt(d); renderFood(); };
+$('#foodToday').onclick=()=>{ foodDate=fmt(new Date()); renderFood(); };
+
+// 目标修改
+$('#foodTarget').addEventListener('change', ()=>{
+  const v = parseInt($('#foodTarget').value); if(!v) return;
+  const fd = store.food; fd.targets[foodDate]=v; store.food=fd; changed(); renderFood();
+});
+
+// 食物库联动
+$('#foodNames').innerHTML = FOOD_DB.map(f=>`<option value="${f[0]}">`).join('');
+function foodAutoCalc(){
+  const f = FOOD_DB.find(x=>x[0]===$('#fName').value.trim());
+  const qty = parseFloat($('#fQty').value)||1;
+  if(f){
+    $('#fUnit').textContent = '× ' + f[1];
+    $('#fKcal').value = Math.round(f[2]*qty);
+    $('#fProtein').textContent = '蛋白质约 ' + (Math.round(f[3]*qty*10)/10) + ' g';
+  } else {
+    $('#fUnit').textContent = ''; $('#fProtein').textContent = '';
+  }
+}
+$('#fName').addEventListener('input', foodAutoCalc);
+$('#fQty').addEventListener('input', foodAutoCalc);
+
+// 添加
+$('#foodAdd').onclick=()=>{
+  const name = $('#fName').value.trim();
+  const kcal = parseFloat($('#fKcal').value)||0;
+  if(!name){ alert('请填写食物名称'); return; }
+  if(kcal<=0){ alert('请填写热量（选库中食物会自动算）'); return; }
+  const f = FOOD_DB.find(x=>x[0]===name);
+  const qty = parseFloat($('#fQty').value)||1;
+  const entry = {
+    meal: $('#fMeal').value, name, qty,
+    unit: f? f[1] : '份',
+    kcal, p: f? Math.round(f[3]*qty*10)/10 : 0
+  };
+  const fd = store.food; (fd.logs[foodDate]=fd.logs[foodDate]||[]).push(entry); store.food=fd;
+  $('#fName').value=''; $('#fKcal').value=''; $('#fQty').value=1; foodAutoCalc();
+  changed(); renderFood();
+};
+
+// 删除
+$('#foodList').addEventListener('click', e=>{
+  const d = e.target.closest('.del'); if(!d) return;
+  const fd = store.food; const arr = fd.logs[foodDate]||[];
+  arr.splice(+d.dataset.fi,1); fd.logs[foodDate]=arr; store.food=fd;
+  changed(); renderFood();
+});
+
+// 按模板预填
+$('#prefillBtn').onclick=()=>{
+  const d = new Date(foodDate+'T12:00:00');
+  const info = DOW_INFO[(d.getDay()+6)%7];
+  const tpl = DIETS.find(x=>x.id===info.dietId);
+  if(!tpl) return;
+  const fd = store.food; const arr = fd.logs[foodDate]=fd.logs[foodDate]||[];
+  tpl.meals.forEach(m=>{
+    const k = parseInt(m[3])||0;
+    arr.push({ meal: guessMeal(m[0]), name: m[1], qty:1, unit:m[2]||'份', kcal:k, p:0 });
+  });
+  store.food=fd; changed(); renderFood();
+  alert(`已按「${tpl.name}」模板预填 ${tpl.meals.length} 条，可逐条删改`);
+};
+
 /* ================= 初始化 ================= */
 renderTrain();
 renderDiet();
 renderBody();
+renderFood();
 (function initSync(){
   const cfg=syncCfg.get();
   if(cfg){ $('#sbUrl').value=cfg.url; $('#sbKey').value=cfg.key; pullNow(false); }
