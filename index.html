@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>训练计划打卡 · 2026 晚间版</title>
+<style>
+  :root{
+    --bg:#f1f5f9; --card:#ffffff; --ink:#0f172a; --sub:#64748b; --line:#e2e8f0;
+    --green:#16a34a; --green-soft:#dcfce7; --blue:#2563eb; --blue-soft:#dbeafe;
+    --amber:#d97706; --amber-soft:#fef3c7; --violet:#7c3aed; --violet-soft:#ede9fe;
+    --dark:#0f172a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;padding-bottom:60px}
+  .wrap{max-width:780px;margin:0 auto;padding:0 14px}
+
+  /* ---------- Header ---------- */
+  header{background:linear-gradient(135deg,#0f172a 0%,#1e293b 60%,#14532d 130%);color:#fff;padding:22px 0 18px}
+  header .wrap{display:flex;flex-direction:column;gap:12px}
+  .h-title{font-size:22px;font-weight:800;letter-spacing:.5px}
+  .h-sub{font-size:12.5px;color:#94a3b8;margin-top:2px}
+  .week-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .week-label{font-size:14px;font-weight:600;background:rgba(255,255,255,.1);padding:6px 12px;border-radius:8px}
+  .wk-btn{background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .wk-btn:active{transform:scale(.96)}
+  .wk-btn.today{background:var(--green);font-weight:700}
+  .progress-row{display:flex;align-items:center;gap:12px}
+  .p-track{flex:1;height:10px;background:rgba(255,255,255,.15);border-radius:99px;overflow:hidden}
+  .p-fill{height:100%;background:linear-gradient(90deg,#4ade80,#22c55e);border-radius:99px;transition:width .35s}
+  .p-text{font-size:12.5px;color:#cbd5e1;white-space:nowrap}
+
+  /* ---------- Tabs ---------- */
+  .tabs{position:sticky;top:0;z-index:50;background:var(--bg);padding:10px 0 8px;display:flex;gap:8px;overflow-x:auto}
+  .tab{flex:1;min-width:fit-content;text-align:center;padding:9px 10px;border-radius:10px;background:#fff;border:1px solid var(--line);font-size:14px;font-weight:600;color:var(--sub);cursor:pointer;white-space:nowrap}
+  .tab.active{background:var(--dark);color:#fff;border-color:var(--dark)}
+
+  /* ---------- Cards ---------- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden}
+  .day-head{padding:14px 14px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;cursor:pointer;user-select:none}
+  .day-head .l{min-width:0}
+  .dow{font-size:12px;font-weight:700;color:var(--blue);letter-spacing:1px}
+  .dow .today-badge{background:var(--green);color:#fff;border-radius:6px;padding:1px 7px;font-size:11px;margin-left:6px;vertical-align:1px}
+  .day-title{font-size:16.5px;font-weight:800;margin-top:2px}
+  .day-meta{font-size:12px;color:var(--sub);margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 12px}
+  .day-count{white-space:nowrap;font-size:12.5px;font-weight:700;color:var(--sub);background:var(--bg);border-radius:99px;padding:4px 10px;align-self:center}
+  .day-count.done{background:var(--green-soft);color:var(--green)}
+  .day-body{border-top:1px dashed var(--line);display:none}
+  .day-card.open .day-body{display:block}
+
+  /* ---------- Exercise rows ---------- */
+  .ex{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #f1f5f9}
+  .ex:last-child{border-bottom:none}
+  .ex.warm{background:#fffdf5}
+  .ex.stretch{background:#fafaff}
+  .chk{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid #cbd5e1;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+  .chk svg{width:14px;height:14px;stroke:#fff;stroke-width:3;fill:none;opacity:0;transform:scale(.5);transition:all .15s}
+  .ex.checked .chk{background:var(--green);border-color:var(--green)}
+  .ex.checked .chk svg{opacity:1;transform:scale(1)}
+  .ex-info{flex:1;min-width:0}
+  .ex-name{font-size:14.5px;font-weight:650}
+  .ex.checked .ex-name{color:var(--sub);text-decoration:line-through;text-decoration-color:#bbf7d0}
+  .ex-meta{font-size:12px;color:var(--sub);margin-top:2px;display:flex;flex-wrap:wrap;gap:2px 10px}
+  .ex-meta b{color:#334155;font-weight:600}
+  .ex-tip{font-size:12px;color:var(--amber);margin-top:2px}
+  .tag{flex:none;font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 6px}
+  .tag.warm{background:var(--amber-soft);color:var(--amber)}
+  .tag.main{background:var(--blue-soft);color:var(--blue)}
+  .tag.stretch{background:var(--violet-soft);color:var(--violet)}
+  .demo{flex:none;font-size:12px;font-weight:600;color:var(--blue);background:var(--blue-soft);border-radius:8px;padding:6px 10px;text-decoration:none;white-space:nowrap}
+  .demo:active{transform:scale(.95)}
+  .diet-link{display:block;margin:8px 12px 12px;font-size:12.5px;color:var(--green);font-weight:600;cursor:pointer}
+  .diet-link::before{content:"🍚 "}
+
+  /* ---------- Diet ---------- */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{background:#f8fafc;text-align:left;padding:8px 10px;color:var(--sub);font-weight:600;font-size:12px;white-space:nowrap}
+  td{padding:8px 10px;border-top:1px solid #f1f5f9;vertical-align:top}
+  td.k{white-space:nowrap;color:var(--sub)}
+  .tbl-scroll{overflow-x:auto}
+  .diet-head{padding:13px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none}
+  .diet-head .t{font-weight:800;font-size:15px}
+  .diet-head .kcal{font-size:12px;font-weight:700;color:var(--green);background:var(--green-soft);border-radius:99px;padding:3px 10px;white-space:nowrap;margin-left:8px}
+  .diet-body{display:none;border-top:1px dashed var(--line)}
+  .card.open .diet-body{display:block}
+  .arrow{transition:transform .2s;color:#94a3b8;font-size:12px}
+  .card.open .arrow{transform:rotate(180deg)}
+
+  /* ---------- Body comp ---------- */
+  .base-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;padding:14px}
+  .base-item{background:#f8fafc;border-radius:10px;padding:10px;text-align:center}
+  .base-item .v{font-size:18px;font-weight:800;color:var(--dark)}
+  .base-item .v small{font-size:11px;color:var(--sub);font-weight:500}
+  .base-item .k{font-size:11.5px;color:var(--sub);margin-top:2px}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px}
+  .form-grid label{font-size:12px;color:var(--sub);display:block;margin-bottom:4px}
+  .form-grid input,.form-grid select{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:14px;background:#fff}
+  .form-grid input:focus{outline:2px solid var(--blue-soft);border-color:var(--blue)}
+  .btn{background:var(--green);color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:14.5px;font-weight:700;cursor:pointer}
+  .btn:active{transform:scale(.97)}
+  .btn.ghost{background:#fff;color:var(--sub);border:1px solid var(--line)}
+  .btn.small{padding:7px 12px;font-size:12.5px}
+  .sec-title{font-size:15px;font-weight:800;padding:14px 14px 0;display:flex;justify-content:space-between;align-items:center}
+  .chart-box{padding:10px 14px 16px}
+  canvas{width:100%;height:220px;display:block}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--sub);padding:0 14px 10px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .del{color:#ef4444;font-size:12px;cursor:pointer;white-space:nowrap}
+  .note{font-size:12px;color:var(--sub);padding:0 14px 14px}
+
+  /* ---------- Rules / info ---------- */
+  .info-card{padding:14px}
+  .info-card h3{font-size:15px;font-weight:800;margin-bottom:8px}
+  .info-card ul{list-style:none}
+  .info-card li{font-size:13.5px;padding:7px 0 7px 24px;position:relative;border-bottom:1px solid #f1f5f9}
+  .info-card li:last-child{border-bottom:none}
+  .info-card li::before{content:"";position:absolute;left:4px;top:14px;width:7px;height:7px;border-radius:50%;background:var(--green)}
+  .info-card li b{color:var(--dark)}
+  .goal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;padding:4px 0}
+  .goal{background:#f8fafc;border-radius:10px;padding:12px}
+  .goal .m{font-size:12px;font-weight:800;color:var(--blue)}
+  .goal div{font-size:12.5px;color:#334155;margin-top:4px}
+
+  footer{text-align:center;font-size:11.5px;color:#94a3b8;padding:24px 0 8px}
+  .hidden{display:none!important}
+  @media (max-width:420px){
+    .ex-meta{gap:2px 8px}
+    .form-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div>
+      <div class="h-title">训练计划打卡</div>
+      <div class="h-sub">晚间力量版 · 足球 + 跑步专项 · 2026年7月</div>
+    </div>
+    <div class="week-bar">
+      <button class="wk-btn" id="prevWeek">‹ 上周</button>
+      <span class="week-label" id="weekLabel"></span>
+      <button class="wk-btn" id="nextWeek">下周 ›</button>
+      <button class="wk-btn today" id="curWeek">回到本周</button>
+    </div>
+    <div class="progress-row">
+      <div class="p-track"><div class="p-fill" id="pFill"></div></div>
+      <span class="p-text" id="pText"></span>
+    </div>
+    <div id="syncPill" style="font-size:12px;color:#94a3b8"></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <div class="tab active" data-tab="train">🏋️ 训练打卡</div>
+    <div class="tab" data-tab="diet">🍚 饮食参考</div>
+    <div class="tab" data-tab="body">📊 体测报告</div>
+    <div class="tab" data-tab="rules">⚽ 调整与目标</div>
+  </div>
+
+  <section id="tab-train"></section>
+
+  <section id="tab-diet" class="hidden">
+    <div class="card info-card" style="margin-bottom:14px">
+      <h3>饮食原则（结合体测）</h3>
+      <ul>
+        <li><b>血糖波动大</b>：练前避免能量胶/香蕉，优先燕麦、红薯、全麦等慢碳</li>
+        <li><b>细胞外液偏低（32.7%）</b>：所有训练日喝含钠电解质水</li>
+        <li>力量日晚8点后练，练后餐（21:00）+ 睡前酪蛋白（22:00）促进夜间恢复</li>
+        <li>跑步日早上练，5:30 吃跑前餐（香蕉+白面包）</li>
+      </ul>
+    </div>
+    <div id="dietList"></div>
+  </section>
+
+  <section id="tab-body" class="hidden">
+    <div class="card">
+      <div class="sec-title">最新体测基准 <span style="font-size:12px;color:var(--sub);font-weight:500">2026-07 体测报告</span></div>
+      <div class="base-grid">
+        <div class="base-item"><div class="v">63.2<small> kg</small></div><div class="k">体重</div></div>
+        <div class="base-item"><div class="v">16.5<small> %</small></div><div class="k">体脂率</div></div>
+        <div class="base-item"><div class="v">30.0<small> kg</small></div><div class="k">骨骼肌</div></div>
+        <div class="base-item"><div class="v">44.5<small> kg</small></div><div class="k">肌肉量</div></div>
+        <div class="base-item"><div class="v">1813<small> kcal</small></div><div class="k">基础代谢</div></div>
+        <div class="base-item"><div class="v">81<small> 分</small></div><div class="k">健康得分</div></div>
+        <div class="base-item"><div class="v">32.7<small> %</small></div><div class="k">细胞外液（偏低）</div></div>
+      </div>
+      <div class="note">38岁 / 168cm · 提示：右手肌肉量偏高，单侧动作左手先做；细胞外液偏低，训练日注意电解质。</div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">记录新一次体测</div>
+      <div class="form-grid">
+        <div><label>日期</label><input type="date" id="bcDate"></div>
+        <div><label>体重 (kg)</label><input type="number" step="0.1" id="bcWeight" placeholder="如 63.2"></div>
+        <div><label>体脂率 (%)</label><input type="number" step="0.1" id="bcFat" placeholder="如 16.5"></div>
+        <div><label>骨骼肌 (kg)</label><input type="number" step="0.1" id="bcMuscle" placeholder="如 30.0"></div>
+        <div><label>基础代谢 (kcal)</label><input type="number" id="bcBmr" placeholder="如 1813"></div>
+        <div><label>备注</label><input type="text" id="bcNote" placeholder="可选"></div>
+      </div>
+      <div style="padding:0 14px 14px"><button class="btn" id="bcSave">保存记录</button></div>
+    </div>
+
+    <div class="card" id="trendCard">
+      <div class="sec-title">趋势</div>
+      <div class="legend">
+        <span><i style="background:#2563eb"></i>体重 kg</span>
+        <span><i style="background:#16a34a"></i>体脂率 %</span>
+        <span><i style="background:#d97706"></i>骨骼肌 kg</span>
+      </div>
+      <div class="chart-box"><canvas id="trendCanvas"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">历史记录</div>
+      <div class="tbl-scroll"><table id="bcTable">
+        <thead><tr><th>日期</th><th>体重</th><th>体脂率</th><th>骨骼肌</th><th>代谢</th><th>备注</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div style="padding:12px 14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn ghost small" id="exportBtn">导出全部数据（JSON）</button>
+        <button class="btn ghost small" id="importBtn">导入数据</button>
+        <input type="file" id="importFile" accept=".json" class="hidden">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">☁️ 云同步（多设备互通）</div>
+      <div class="note" id="syncHint">配置后，打卡和体测数据自动同步到云端，手机、电脑数据一致。首次使用需在 Supabase 免费建一个项目（约3分钟）。</div>
+      <div class="form-grid">
+        <div><label>Supabase 项目 URL</label><input type="text" id="sbUrl" placeholder="https://xxxx.supabase.co"></div>
+        <div><label>anon public key</label><input type="password" id="sbKey" placeholder="eyJhbGciOi..."></div>
+      </div>
+      <div style="padding:0 14px 14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" id="sbSave">保存并立即同步</button>
+        <button class="btn ghost small" id="sbClear">断开同步</button>
+      </div>
+      <details style="padding:0 14px 14px;font-size:12.5px;color:var(--sub)">
+        <summary style="cursor:pointer;font-weight:700;color:var(--blue)">📖 首次配置教程（点开）</summary>
+        <ol style="padding:10px 0 0 18px;line-height:1.9">
+          <li>打开 <b>supabase.com</b> → 用 GitHub 账号免费注册 → <b>New project</b>，起名随意（如 training），数据库密码随便设一个并保存好，区域选 <b>Singapore</b>（国内访问快）。</li>
+          <li>项目建好后，左侧菜单点 <b>SQL Editor</b> → <b>New query</b>，粘贴下面这段并 <b>Run</b>：<pre style="background:#0f172a;color:#a5f3fc;padding:10px;border-radius:8px;overflow-x:auto;font-size:11.5px;margin-top:6px">create table training_data (
+  id text primary key,
+  data jsonb,
+  updated_at timestamptz default now()
+);
+alter table training_data enable row level security;
+create policy "anon_all" on training_data
+  for all using (true) with check (true);</pre></li>
+          <li>左侧 <b>Project Settings（齿轮）→ API</b>：复制 <b>Project URL</b> 和 <b>anon public</b> key，填到上面两个输入框。</li>
+          <li>点「保存并立即同步」。之后每台设备打开页面填一次同样的两个值即可互通。</li>
+        </ol>
+        <div style="margin-top:6px">说明：anon key 只对你的训练数据表有效，相当于这把锁的钥匙，不要发到公开场所。同步策略为「最后修改优先」。</div>
+      </details>
+    </div>
+  </section>
+
+  <section id="tab-rules" class="hidden">
+    <div class="card info-card">
+      <h3>⚽ 足球日调整方案（周中约每月 1–2 次，通常晚上）</h3>
+      <ul>
+        <li><b>替换周二节奏跑</b>：早上不跑，晚上直接踢球；周二按跑步日饮食（2800–2900 kcal）</li>
+        <li><b>替换周四下肢训练</b>：晚上不练力量，直接踢球；周四按跑步日饮食</li>
+        <li><b>替换周五容量日</b>：晚上不练力量，直接踢球；周六做波速球恢复</li>
+        <li><b>足球后第二天</b>：取消力量训练，只做波速球恢复 + 泡沫轴；按恢复日饮食（2200–2300 kcal）</li>
+      </ul>
+    </div>
+    <div class="card info-card">
+      <h3>🎯 6 个月渐进目标</h3>
+      <div class="goal-grid">
+        <div class="goal"><div class="m">2 个月</div><div>哑铃卧推 10kg×8次<br>节奏跑 8km<br>单腿站立 45秒</div></div>
+        <div class="goal"><div class="m">4 个月</div><div>卧推 10kg×12次+弹力带<br>节奏跑 10km / LSD 15km<br>单腿硬拉+轻哑铃</div></div>
+        <div class="goal"><div class="m">6 个月</div><div>弓箭手俯卧撑 + 引体负重<br>配速提升，LSD 维持<br>闭眼单腿站立 60秒</div></div>
+      </div>
+    </div>
+    <div class="card info-card">
+      <h3>⚠️ 关键提醒</h3>
+      <ul>
+        <li>力量训练统一晚上 8 点后，练后餐（21:00）+ 睡前餐（22:00）</li>
+        <li>跑步偶尔放早上，早餐改为跑前餐（5:30 香蕉+白面包）</li>
+        <li><b>血糖波动大</b>：练前避免能量胶/香蕉，优先燕麦/红薯/全麦</li>
+        <li><b>细胞外液偏低</b>：训练日全天喝含钠电解质水</li>
+        <li><b>右手肌肉量高</b>：所有单侧动作左手先做，日常多用左手</li>
+        <li>连续疲劳时：取消周六波速球，只做泡沫轴 + 拉伸</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>数据默认保存在本浏览器 · 在「体测报告 → 云同步」配置后多设备互通</footer>
+</div>
+
+<script src="data.js"></script>
+
+<script src="app.js"></script>
+</body>
+</html>
