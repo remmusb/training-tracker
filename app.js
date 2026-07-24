@@ -219,6 +219,8 @@ const syncCfg = {
   set(v){ v?localStorage.setItem(SYNC_KEY,JSON.stringify(v)):localStorage.removeItem(SYNC_KEY); }
 };
 function setSyncStatus(txt, color){ const el=$('#syncPill'); el.textContent=txt; el.style.color=color||'#94a3b8'; }
+// URL 归一化：去掉末尾斜杠和 /rest/v1 后缀（Supabase 新界面复制的地址自带该后缀）
+function sbBase(u){ return (u||'').trim().replace(/\/+$/,'').replace(/\/rest\/v1$/i,''); }
 
 function changed(){
   meta.set({updated:new Date().toISOString()});
@@ -234,7 +236,7 @@ async function pushNow(){
   const cfg=syncCfg.get(); if(!cfg) return;
   setSyncStatus('☁️ 同步中…');
   try{
-    const res = await fetch(cfg.url.replace(/\/$/,'')+'/rest/v1/training_data', {
+    const res = await fetch(sbBase(cfg.url)+'/rest/v1/training_data', {
       method:'POST',
       headers:{ 'apikey':cfg.key, 'Authorization':'Bearer '+cfg.key,
         'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates' },
@@ -248,7 +250,7 @@ async function pullNow(showAlerts){
   const cfg=syncCfg.get(); if(!cfg) return false;
   setSyncStatus('☁️ 同步中…');
   try{
-    const res = await fetch(cfg.url.replace(/\/$/,'')+'/rest/v1/training_data?id=eq.main&select=data', {
+    const res = await fetch(sbBase(cfg.url)+'/rest/v1/training_data?id=eq.main&select=data', {
       headers:{ 'apikey':cfg.key, 'Authorization':'Bearer '+cfg.key }
     });
     if(!res.ok) throw new Error(res.status);
@@ -277,9 +279,10 @@ async function pullNow(showAlerts){
 }
 // 同步配置界面
 $('#sbSave').onclick = async ()=>{
-  const url=$('#sbUrl').value.trim(), key=$('#sbKey').value.trim();
+  const url=sbBase($('#sbUrl').value), key=$('#sbKey').value.trim();
   if(!url || !key){ alert('请填写完整的 URL 和 key'); return; }
-  if(!/^https:\/\/[a-z0-9-]+\.supabase\.co/.test(url)){ alert('URL 格式应为 https://xxxx.supabase.co'); return; }
+  if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url)){ alert('URL 格式应为 https://xxxx.supabase.co'); return; }
+  $('#sbUrl').value=url;
   syncCfg.set({url, key});
   await pullNow(true);
 };
