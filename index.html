@@ -249,7 +249,7 @@
 alter table training_data enable row level security;
 create policy "anon_all" on training_data
   for all using (true) with check (true);</pre></li>
-          <li>左侧菜单 <b>Settings → Integrations → Data API</b>：复制 <b>Project URL</b>（形如 https://xxxx.supabase.co）。</li>
+          <li>左侧菜单 <b>Settings → Integrations → Data API</b>：复制 <b>API URL</b>（形如 https://xxxx.supabase.co，若末尾带 /rest/v1/ 也没关系，页面会自动处理）。</li>
           <li>左侧菜单 <b>Settings → Configuration → API Keys</b>：复制 <b>Publishable key</b>（sb_publishable_ 开头；如有 Legacy keys 标签，里面的 anon public key 也可以）。</li>
           <li>两个值填到上面的输入框，点「保存并立即同步」。之后每台设备填一次同样的两个值即可互通。</li>
         </ol>
