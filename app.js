@@ -8,13 +8,20 @@ function bilibili(kw){ return 'https://search.bilibili.com/all?keyword=' + encod
 /* ================= 状态 ================= */
 let weekOffset = 0; // 0=本周
 const CHECK_KEY='train2026_checks_v1', BODY_KEY='train2026_body_v1', FOOD_KEY='train2026_food_v1';
+const MOVES_KEY='train2026_moves_v1', ACT_KEY='train2026_act_v1', SUMM_KEY='train2026_summ_v1';
 const store = {
   get checks(){ try{return JSON.parse(localStorage.getItem(CHECK_KEY))||{}}catch(e){return{}} },
   set checks(v){ localStorage.setItem(CHECK_KEY, JSON.stringify(v)); },
   get body(){ try{return JSON.parse(localStorage.getItem(BODY_KEY))||null}catch(e){return null} },
   set body(v){ localStorage.setItem(BODY_KEY, JSON.stringify(v)); },
   get food(){ try{return JSON.parse(localStorage.getItem(FOOD_KEY))||{logs:{},targets:{}}}catch(e){return{logs:{},targets:{}}} },
-  set food(v){ localStorage.setItem(FOOD_KEY, JSON.stringify(v)); }
+  set food(v){ localStorage.setItem(FOOD_KEY, JSON.stringify(v)); },
+  get moves(){ try{return JSON.parse(localStorage.getItem(MOVES_KEY))||{}}catch(e){return{}} },
+  set moves(v){ localStorage.setItem(MOVES_KEY, JSON.stringify(v)); },
+  get act(){ try{return JSON.parse(localStorage.getItem(ACT_KEY))||{}}catch(e){return{}} },
+  set act(v){ localStorage.setItem(ACT_KEY, JSON.stringify(v)); },
+  get summ(){ try{return JSON.parse(localStorage.getItem(SUMM_KEY))||{}}catch(e){return{}} },
+  set summ(v){ localStorage.setItem(SUMM_KEY, JSON.stringify(v)); }
 };
 // 首次写入体测基准记录
 if(!store.body){
@@ -31,12 +38,29 @@ function renderTrain(){
   $('#weekLabel').textContent = `${mon.getMonth()+1}月${mon.getDate()}日 – ${sun.getMonth()+1}月${sun.getDate()}日` + (isCur?'（本周）':'');
   const weekKey = fmt(mon);
   const checks = store.checks[weekKey] || {};
+  const moves = store.moves[weekKey] || {};
+  const srcOf = {}; // 目标日 -> 源计划
+  Object.keys(moves).forEach(s=>{ srcOf[moves[s]] = s; });
   const todayDow = ['mon','tue','wed','thu','fri','sat','sun'][(new Date().getDay()+6)%7];
 
   let total=0, done=0;
   const html = PLAN.map(day=>{
-    const exHtml = day.ex.map((e,i)=>{
-      const key = `${day.id}_${i}`; total++;
+    // 本日计划已迁出且没有迁入 → 占位卡
+    if(moves[day.id] && !srcOf[day.id]){
+      const tgt = PLAN.find(p=>p.id===moves[day.id]);
+      return `<div class="card day-card"><div class="day-head">
+        <div class="l">
+          <div class="dow">${day.dow}</div>
+          <div class="day-title" style="color:var(--sub)">${day.title}</div>
+          <div class="day-meta"><span>⇄ 已迁移到 ${tgt?tgt.dow:''}</span></div>
+        </div>
+        <button class="btn ghost small" data-unmove="${day.id}" style="align-self:center">撤销迁移</button>
+      </div></div>`;
+    }
+    const srcDay = srcOf[day.id] ? PLAN.find(p=>p.id===srcOf[day.id]) : day;
+    const moved = srcDay.id !== day.id;
+    const exHtml = srcDay.ex.map((e,i)=>{
+      const key = `${srcDay.id}_${i}`; total++;
       const on = !!checks[key]; if(on) done++;
       const meta = [`<b>${e.sr}</b>`];
       if(e.w) meta.push(e.w);
@@ -52,22 +76,26 @@ function renderTrain(){
         <a class="demo" href="${bilibili(e.demo)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">示范</a>
       </div>`;
     }).join('');
-    const dayDone = day.ex.filter((e,i)=>checks[`${day.id}_${i}`]).length;
+    const dayDone = srcDay.ex.filter((e,i)=>checks[`${srcDay.id}_${i}`]).length;
     return `<div class="card day-card ${isCur&&day.id===todayDow?'open':''}" data-day="${day.id}">
       <div class="day-head">
         <div class="l">
-          <div class="dow">${day.dow}${isCur&&day.id===todayDow?'<span class="today-badge">今天</span>':''}</div>
-          <div class="day-title">${day.title}</div>
-          <div class="day-meta"><span>🕗 ${day.time}</span><span>🎒 ${day.equip}</span><span>🍚 ${day.diet}</span></div>
+          <div class="dow">${day.dow}${isCur&&day.id===todayDow?'<span class="today-badge">今天</span>':''}${moved?`<span class="today-badge" style="background:var(--blue)">自${srcDay.dow}迁来</span>`:''}</div>
+          <div class="day-title">${srcDay.title}</div>
+          <div class="day-meta"><span>🕗 ${srcDay.time}</span><span>🎒 ${srcDay.equip}</span><span>🍚 ${srcDay.diet}</span></div>
         </div>
-        <span class="day-count ${dayDone===day.ex.length?'done':''}">${dayDone}/${day.ex.length}</span>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;align-self:center">
+          <span class="day-count ${dayDone===srcDay.ex.length?'done':''}">${dayDone}/${srcDay.ex.length}</span>
+          ${!moved?`<button class="btn ghost small mv-btn" data-mv="${day.id}">⇄ 迁移</button>`:''}
+        </div>
       </div>
       <div class="day-body">${exHtml}
-        <span class="diet-link" data-diet="${day.dietId}">查看今日饮食安排 →</span>
+        <span class="diet-link" data-diet="${srcDay.dietId}">查看今日饮食安排 →</span>
       </div>
     </div>`;
   }).join('');
-  $('#tab-train').innerHTML = html;
+  const summCard = (typeof weekReportCardHtml==='function') ? weekReportCardHtml(weekKey) : '';
+  $('#tab-train').innerHTML = html + summCard;
   const pct = total? Math.round(done/total*100):0;
   $('#pFill').style.width = pct+'%';
   $('#pText').textContent = `本周完成 ${done}/${total} 项 · ${pct}%`;
@@ -148,7 +176,7 @@ $('#bcTable').addEventListener('click', e=>{
   const arr=store.body; arr.splice(+d.dataset.i,1); store.body=arr; changed(); renderBody();
 });
 $('#exportBtn').onclick=()=>{
-  const data = { 打卡: store.checks, 体测: store.body, 饮食: store.food, 导出时间: new Date().toLocaleString('zh-CN') };
+  const data = { 打卡: store.checks, 体测: store.body, 饮食: store.food, 迁移: store.moves, 运动记录: store.act, 周报: store.summ, 导出时间: new Date().toLocaleString('zh-CN') };
   const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = `训练数据_${fmt(new Date())}.json`; a.click();
@@ -204,9 +232,10 @@ window.addEventListener('resize', ()=>{ if(!$('#tab-body').classList.contains('h
 /* ================= Tab 切换 ================= */
 function switchTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
-  ['train','diet','food','body','rules'].forEach(n=>$('#tab-'+n).classList.toggle('hidden', n!==name));
+  ['train','diet','food','act','body','rules'].forEach(n=>$('#tab-'+n).classList.toggle('hidden', n!==name));
   if(name==='body') renderBody();
   if(name==='food') renderFood();
+  if(name==='act' && typeof renderAct==='function') renderAct();
   window.scrollTo({top:0});
 }
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchTab(t.dataset.tab));
@@ -243,7 +272,7 @@ async function pushNow(){
       method:'POST',
       headers:{ 'apikey':cfg.key, 'Authorization':'Bearer '+cfg.key,
         'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates' },
-      body: JSON.stringify({ id:'main', data:{ checks:store.checks, body:store.body, food:store.food, updated:meta.get().updated } })
+      body: JSON.stringify({ id:'main', data:{ checks:store.checks, body:store.body, food:store.food, moves:store.moves, act:store.act, summ:store.summ, updated:meta.get().updated } })
     });
     if(!res.ok) throw new Error(res.status);
     setSyncStatus('☁️ 已同步 '+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}), '#4ade80');
@@ -265,6 +294,9 @@ async function pullNow(showAlerts){
         localStorage.setItem(CHECK_KEY, JSON.stringify(remote.checks||{}));
         localStorage.setItem(BODY_KEY, JSON.stringify(remote.body||[]));
         if(remote.food) localStorage.setItem(FOOD_KEY, JSON.stringify(remote.food));
+        if(remote.moves) localStorage.setItem(MOVES_KEY, JSON.stringify(remote.moves));
+        if(remote.act) localStorage.setItem(ACT_KEY, JSON.stringify(remote.act));
+        if(remote.summ) localStorage.setItem(SUMM_KEY, JSON.stringify(remote.summ));
         meta.set({updated:ru});
         renderTrain(); renderBody();
         if(!$('#tab-food').classList.contains('hidden')) renderFood();
@@ -305,10 +337,13 @@ $('#importFile').addEventListener('change', e=>{
   rd.onload=()=>{
     try{
       const d=JSON.parse(rd.result);
-      if(!d.打卡 && !d.体测 && !d.饮食) throw new Error('格式不对');
+      if(!d.打卡 && !d.体测 && !d.饮食 && !d.运动记录) throw new Error('格式不对');
       if(d.打卡) localStorage.setItem(CHECK_KEY, JSON.stringify(d.打卡));
       if(d.体测) localStorage.setItem(BODY_KEY, JSON.stringify(d.体测));
       if(d.饮食) localStorage.setItem(FOOD_KEY, JSON.stringify(d.饮食));
+      if(d.迁移) localStorage.setItem(MOVES_KEY, JSON.stringify(d.迁移));
+      if(d.运动记录) localStorage.setItem(ACT_KEY, JSON.stringify(d.运动记录));
+      if(d.周报) localStorage.setItem(SUMM_KEY, JSON.stringify(d.周报));
       changed(); renderTrain(); renderBody();
       alert('导入成功');
     }catch(err){ alert('导入失败：文件格式不正确'); }
