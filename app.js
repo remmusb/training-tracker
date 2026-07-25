@@ -529,26 +529,51 @@ function compressImage(file){
     img.src=url;
   });
 }
-async function kimiRecognize(dataUrl){
+/* Kimi 模型自动适配：部分账户没有 kimi-k3 权限会 404，按候选列表自动降级 */
+const KIMI_MODEL_LS='train2026_kimi_model';
+const KIMI_VISION_MODELS=['kimi-k3','kimi-k2.5','moonshot-v1-128k-vision-preview','moonshot-v1-32k-vision-preview','moonshot-v1-8k-vision-preview'];
+const KIMI_TEXT_MODELS=['kimi-k3','kimi-k2.6','kimi-k2.5','moonshot-v1-32k','moonshot-v1-8k'];
+async function kimiChat(payload, needVision){
   const key=localStorage.getItem(KIMI_LS);
-  const res=await fetch('https://api.moonshot.cn/v1/chat/completions',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-    body:JSON.stringify({
-      model:'kimi-k3',
-      messages:[
-        {role:'system', content:'你是食物营养识别助手。识别照片中的所有食物，估算每样的份量、热量和营养素。只输出JSON，不要输出其他内容，格式：{"items":[{"name":"食物名","qty":1,"unit":"份量描述如100g/1碗","kcal":数字,"p":蛋白质克数}],"note":"一句话整体说明"}。按中式餐饮常见分量估算，拿不准就保守估计。'},
-        {role:'user', content:[
-          {type:'text', text:'识别这顿饭的食物，估算热量和蛋白质'},
-          {type:'image_url', image_url:{url:dataUrl}}
-        ]}
-      ]
-    })
-  });
-  if(res.status===401) throw new Error('API Key 无效或余额不足，请检查');
-  if(res.status===429) throw new Error('请求太频繁，稍后再试');
-  if(!res.ok){ let m=''; try{ m=(await res.json()).error.message; }catch(e){} throw new Error('识别失败（HTTP '+res.status+'）'+(m?('：'+m):'')); }
-  const j=await res.json();
+  const prefs=needVision?KIMI_VISION_MODELS:KIMI_TEXT_MODELS;
+  const saved=localStorage.getItem(KIMI_MODEL_LS);
+  const models=(saved?[saved]:[]).concat(prefs).filter((v,i,a)=>a.indexOf(v)===i);
+  let lastStatus=0;
+  for(const m of models){
+    const res=await fetch('https://api.moonshot.cn/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify(Object.assign({},payload,{model:m}))
+    });
+    if(res.status===404){ lastStatus=404; continue; } // 模型不存在或无权限 → 试下一个
+    if(res.status===401) throw new Error('API Key 无效或余额不足');
+    if(res.status===429) throw new Error('请求太频繁，稍后再试');
+    if(!res.ok){
+      let em=''; try{ em=(await res.json()).error.message; }catch(e){}
+      if(res.status===400 && needVision){ lastStatus=400; continue; } // 文本模型收到图片 → 试下一个
+      throw new Error('请求失败（HTTP '+res.status+'）'+(em?('：'+em):''));
+    }
+    localStorage.setItem(KIMI_MODEL_LS,m); // 记住可用模型
+    return await res.json();
+  }
+  // 全部失败：拉取账户可用模型帮助诊断
+  let avail='';
+  try{
+    const r=await fetch('https://api.moonshot.cn/v1/models',{headers:{'Authorization':'Bearer '+key}});
+    const j=await r.json(); avail=(j.data||[]).map(x=>x.id).join('、');
+  }catch(e){}
+  throw new Error('候选模型都不可用（最后 HTTP '+lastStatus+'）。你账户当前可用模型：'+(avail||'获取失败')+'。请把这条信息截图发给我');
+}
+async function kimiRecognize(dataUrl){
+  const j = await kimiChat({
+    messages:[
+      {role:'system', content:'你是食物营养识别助手。识别照片中的所有食物，估算每样的份量、热量和营养素。只输出JSON，不要输出其他内容，格式：{"items":[{"name":"食物名","qty":1,"unit":"份量描述如100g/1碗","kcal":数字,"p":蛋白质克数}],"note":"一句话整体说明"}。按中式餐饮常见分量估算，拿不准就保守估计。'},
+      {role:'user', content:[
+        {type:'text', text:'识别这顿饭的食物，估算热量和蛋白质'},
+        {type:'image_url', image_url:{url:dataUrl}}
+      ]}
+    ]
+  }, true);
   const txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
   return parseJsonLoose(txt);
 }
