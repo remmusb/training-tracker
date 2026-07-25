@@ -535,8 +535,7 @@ async function kimiRecognize(dataUrl){
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
     body:JSON.stringify({
-      model:'kimi-latest', temperature:0.3,
-      response_format:{type:'json_object'},
+      model:'kimi-k3',
       messages:[
         {role:'system', content:'你是食物营养识别助手。识别照片中的所有食物，估算每样的份量、热量和营养素。只输出JSON，不要输出其他内容，格式：{"items":[{"name":"食物名","qty":1,"unit":"份量描述如100g/1碗","kcal":数字,"p":蛋白质克数}],"note":"一句话整体说明"}。按中式餐饮常见分量估算，拿不准就保守估计。'},
         {role:'user', content:[
@@ -548,11 +547,17 @@ async function kimiRecognize(dataUrl){
   });
   if(res.status===401) throw new Error('API Key 无效或余额不足，请检查');
   if(res.status===429) throw new Error('请求太频繁，稍后再试');
-  if(!res.ok) throw new Error('识别失败（HTTP '+res.status+'）');
+  if(!res.ok){ let m=''; try{ m=(await res.json()).error.message; }catch(e){} throw new Error('识别失败（HTTP '+res.status+'）'+(m?('：'+m):'')); }
   const j=await res.json();
   const txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
-  try{ return JSON.parse(txt); }
-  catch(e){ throw new Error('返回格式异常，请重试'); }
+  return parseJsonLoose(txt);
+}
+// 从模型输出中宽松提取 JSON（兼容思考模型夹杂说明文字的情况）
+function parseJsonLoose(txt){
+  try{ return JSON.parse(txt); }catch(e){}
+  const a=txt.indexOf('{'), b=txt.lastIndexOf('}');
+  if(a>=0 && b>a){ try{ return JSON.parse(txt.slice(a,b+1)); }catch(e){} }
+  throw new Error('返回格式异常，请重试');
 }
 function renderSnapResult(dataUrl, result){
   const items=(result.items||[]).filter(x=>x && x.name && (+x.kcal)>0);
