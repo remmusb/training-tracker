@@ -451,6 +451,120 @@ $('#prefillBtn').onclick=()=>{
   alert(`已按「${tpl.name}」模板预填 ${tpl.meals.length} 条，可逐条删改`);
 };
 
+/* ================= 拍照识别（Kimi 视觉模型） ================= */
+const KIMI_LS='train2026_kimi_key';
+$('#kimiKey').value = localStorage.getItem(KIMI_LS)||'';
+$('#kimiKeySave').onclick=()=>{
+  const k=$('#kimiKey').value.trim();
+  if(!k.startsWith('sk-')){ alert('key 一般以 sk- 开头，请检查'); return; }
+  localStorage.setItem(KIMI_LS,k); $('#kimiCfg').open=false;
+  $('#snapStatus').textContent='Key 已保存';
+};
+$('#snapBtn').onclick=()=>{
+  if(!localStorage.getItem(KIMI_LS)){ $('#kimiCfg').open=true; alert('请先配置 Moonshot API Key（点开下方灰色区域）'); return; }
+  $('#snapFile').click();
+};
+$('#snapFile').addEventListener('change', async e=>{
+  const f=e.target.files[0]; e.target.value='';
+  if(!f) return;
+  $('#snapResult').innerHTML='';
+  $('#snapStatus').textContent='压缩图片…';
+  try{
+    const dataUrl = await compressImage(f);
+    $('#snapStatus').textContent='Kimi 识别中（约5-10秒）…';
+    const result = await kimiRecognize(dataUrl);
+    $('#snapStatus').textContent='';
+    renderSnapResult(dataUrl, result);
+  }catch(err){
+    $('#snapStatus').textContent='⚠️ '+err.message;
+  }
+});
+function compressImage(file){
+  return new Promise((res,rej)=>{
+    const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      let w=img.width, h=img.height; const max=1280;
+      if(w>max||h>max){ const r=Math.min(max/w,max/h); w=Math.round(w*r); h=Math.round(h*r); }
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg',0.85));
+    };
+    img.onerror=()=>rej(new Error('图片读取失败'));
+    img.src=url;
+  });
+}
+async function kimiRecognize(dataUrl){
+  const key=localStorage.getItem(KIMI_LS);
+  const res=await fetch('https://api.moonshot.cn/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+    body:JSON.stringify({
+      model:'kimi-latest', temperature:0.3,
+      response_format:{type:'json_object'},
+      messages:[
+        {role:'system', content:'你是食物营养识别助手。识别照片中的所有食物，估算每样的份量、热量和营养素。只输出JSON，不要输出其他内容，格式：{"items":[{"name":"食物名","qty":1,"unit":"份量描述如100g/1碗","kcal":数字,"p":蛋白质克数}],"note":"一句话整体说明"}。按中式餐饮常见分量估算，拿不准就保守估计。'},
+        {role:'user', content:[
+          {type:'text', text:'识别这顿饭的食物，估算热量和蛋白质'},
+          {type:'image_url', image_url:{url:dataUrl}}
+        ]}
+      ]
+    })
+  });
+  if(res.status===401) throw new Error('API Key 无效或余额不足，请检查');
+  if(res.status===429) throw new Error('请求太频繁，稍后再试');
+  if(!res.ok) throw new Error('识别失败（HTTP '+res.status+'）');
+  const j=await res.json();
+  const txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
+  try{ return JSON.parse(txt); }
+  catch(e){ throw new Error('返回格式异常，请重试'); }
+}
+function renderSnapResult(dataUrl, result){
+  const items=(result.items||[]).filter(x=>x && x.name && (+x.kcal)>0);
+  if(!items.length){ $('#snapResult').innerHTML='<div class="note">没识别出食物，换张照片试试。</div>'; return; }
+  const total=items.reduce((s,x)=>s+(+x.kcal||0),0);
+  $('#snapResult').innerHTML=`
+    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:8px">
+      <img src="${dataUrl}" style="width:84px;height:84px;object-fit:cover;border-radius:10px;flex:none">
+      <div style="font-size:12.5px;color:var(--sub)">${result.note||''}<br>识别到 <b style="color:var(--ink)">${items.length}</b> 样食物，共约 <b style="color:var(--ink)">${Math.round(total)}</b> kcal，可删改后入库。</div>
+    </div>
+    <div style="margin-bottom:8px;font-size:13px">餐次：
+      <select id="snapMeal" style="border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13.5px">
+        ${['早餐','上午加餐','午餐','下午加餐','练前餐','练后餐','跑前餐','跑步补给','晚餐','睡前','其他'].map(m=>`<option>${m}</option>`).join('')}
+      </select>
+    </div>
+    ${items.map((x,i)=>`
+      <div class="ex" style="cursor:default">
+        <input type="checkbox" class="snap-chk" data-i="${i}" checked style="width:18px;height:18px;accent-color:var(--green)">
+        <div class="ex-info">
+          <div class="ex-name">${x.name}</div>
+          <div class="ex-meta"><b>${x.qty||1} × ${x.unit||'份'}</b>${x.p?`<span>·</span>蛋白质 ${Math.round(x.p*10)/10} g`:''}</div>
+        </div>
+        <input type="number" class="snap-kcal" data-i="${i}" value="${Math.round(x.kcal)}" style="width:72px;border:1px solid var(--line);border-radius:8px;padding:6px;font-size:13.5px;text-align:right">
+        <span style="font-size:12px;color:var(--sub)">kcal</span>
+      </div>`).join('')}
+    <div style="display:flex;gap:10px;margin-top:10px">
+      <button class="btn" id="snapAddAll">✓ 加入今日记录</button>
+      <button class="btn ghost small" id="snapCancel">取消</button>
+    </div>`;
+  $('#snapCancel').onclick=()=>{ $('#snapResult').innerHTML=''; };
+  $('#snapAddAll').onclick=()=>{
+    const meal=$('#snapMeal').value;
+    const fd=store.food; const arr=fd.logs[foodDate]=fd.logs[foodDate]||[];
+    let n=0;
+    document.querySelectorAll('.snap-chk').forEach(chk=>{
+      if(!chk.checked) return;
+      const i=+chk.dataset.i; const x=items[i];
+      const kcal=parseFloat(document.querySelector(`.snap-kcal[data-i="${i}"]`).value)||x.kcal;
+      arr.push({ meal, name:x.name, qty:x.qty||1, unit:x.unit||'份', kcal, p:Math.round((x.p||0)*10)/10 });
+      n++;
+    });
+    store.food=fd; changed(); renderFood();
+    $('#snapResult').innerHTML='';
+    $('#snapStatus').textContent=`已加入 ${n} 条记录 ✓`;
+  };
+}
+
 /* ================= 初始化 ================= */
 renderTrain();
 renderDiet();
