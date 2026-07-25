@@ -205,6 +205,29 @@
     </div>
 
     <div class="card">
+      <div class="sec-title">📷 拍照识别（Kimi 大模型）</div>
+      <div class="note">拍一顿饭，Kimi 视觉模型自动识别食物、估算热量和蛋白质，确认后写入当天记录。识别一次约几分钱。</div>
+      <div style="padding:0 14px 14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn" id="snapBtn">拍照 / 选图识别</button>
+        <input type="file" id="snapFile" accept="image/*" capture="environment" class="hidden">
+        <span id="snapStatus" style="font-size:12.5px;color:var(--sub)"></span>
+      </div>
+      <details style="padding:0 14px 14px;font-size:12.5px;color:var(--sub)" id="kimiCfg">
+        <summary style="cursor:pointer;font-weight:700;color:var(--blue)">⚙️ 首次配置：Moonshot API Key</summary>
+        <ol style="padding:10px 0 0 18px;line-height:1.9">
+          <li>打开 <b>platform.moonshot.cn</b> → 登录 → 左侧 <b>API Key 管理</b> → <b>新建 API Key</b>。</li>
+          <li>账户需有少量余额（用户中心充值，识别一张照片约 0.02–0.05 元）。</li>
+          <li>把 key（sk- 开头）粘贴到下面，只保存在本浏览器，不会上传别处（识别请求直接发给 Moonshot 官方接口）。</li>
+        </ol>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input type="password" id="kimiKey" placeholder="sk-..." style="flex:1;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:14px">
+          <button class="btn small" id="kimiKeySave">保存</button>
+        </div>
+      </details>
+      <div id="snapResult" style="padding:0 14px 14px"></div>
+    </div>
+
+    <div class="card">
       <div class="sec-title">添加记录</div>
       <div class="form-grid">
         <div><label>餐次</label><select id="fMeal">
