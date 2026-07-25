@@ -133,22 +133,13 @@ $('#fbPreview').addEventListener('click', e=>{
 
 // ---- AI 读图 ----
 async function kimiVision(prompt, dataUrl){
-  const key=localStorage.getItem(KIMI_LS);
-  if(!key) throw new Error('请先在「饮食记录」页配置 Moonshot API Key');
-  const res=await fetch('https://api.moonshot.cn/v1/chat/completions',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-    body:JSON.stringify({
-      model:'kimi-k3',
-      messages:[
-        {role:'system', content:'你是运动数据提取助手，从App截图中提取数字。只输出JSON，找不到的字段填null。'},
-        {role:'user', content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:dataUrl}}]}
-      ]
-    })
-  });
-  if(res.status===401) throw new Error('API Key 无效或余额不足');
-  if(!res.ok){ let m=''; try{ m=(await res.json()).error.message; }catch(e){} throw new Error('识别失败（HTTP '+res.status+'）'+(m?('：'+m):'')); }
-  const j=await res.json();
+  if(!localStorage.getItem(KIMI_LS)) throw new Error('请先在「饮食记录」页配置 Moonshot API Key');
+  const j = await kimiChat({
+    messages:[
+      {role:'system', content:'你是运动数据提取助手，从App截图中提取数字。只输出JSON，找不到的字段填null。'},
+      {role:'user', content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:dataUrl}}]}
+    ]
+  }, true);
   const txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
   return parseJsonLoose(txt);
 }
@@ -256,15 +247,7 @@ function localSummary(st){
   return `本周训练完成 ${st.tDone}/${st.tTotal} 项（${st.pct}%），饮食记录 ${st.days} 天${st.days?`（日均 ${st.avgKcal} kcal、蛋白质 ${st.avgP}g）`:''}，跑步 ${st.runCount} 次 ${st.runDist.toFixed(1)}km，足球 ${st.fbCount} 场。\n建议：${tips.map((t,i)=>`${i+1}.${t}`).join('；')}。`;
 }
 async function kimiText(prompt){
-  const key=localStorage.getItem(KIMI_LS);
-  const res=await fetch('https://api.moonshot.cn/v1/chat/completions',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-    body:JSON.stringify({ model:'kimi-k3', messages:[{role:'user', content:prompt}] })
-  });
-  if(res.status===401) throw new Error('API Key 无效或余额不足');
-  if(!res.ok){ let m=''; try{ m=(await res.json()).error.message; }catch(e){} throw new Error('生成失败（HTTP '+res.status+'）'+(m?('：'+m):'')); }
-  const j=await res.json();
+  const j = await kimiChat({ messages:[{role:'user', content:prompt}] }, false);
   return (j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
 }
 // 生成按钮（事件委托）
