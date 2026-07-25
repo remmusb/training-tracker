@@ -139,8 +139,7 @@ async function kimiVision(prompt, dataUrl){
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
     body:JSON.stringify({
-      model:'kimi-latest', temperature:0.1,
-      response_format:{type:'json_object'},
+      model:'kimi-k3',
       messages:[
         {role:'system', content:'你是运动数据提取助手，从App截图中提取数字。只输出JSON，找不到的字段填null。'},
         {role:'user', content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:dataUrl}}]}
@@ -148,10 +147,10 @@ async function kimiVision(prompt, dataUrl){
     })
   });
   if(res.status===401) throw new Error('API Key 无效或余额不足');
-  if(!res.ok) throw new Error('识别失败（HTTP '+res.status+'）');
+  if(!res.ok){ let m=''; try{ m=(await res.json()).error.message; }catch(e){} throw new Error('识别失败（HTTP '+res.status+'）'+(m?('：'+m):'')); }
   const j=await res.json();
   const txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
-  return JSON.parse(txt);
+  return parseJsonLoose(txt);
 }
 $('#rnAi').onclick=async ()=>{
   if(!rnImgData){ alert('先上传记录截图'); return; }
@@ -261,10 +260,10 @@ async function kimiText(prompt){
   const res=await fetch('https://api.moonshot.cn/v1/chat/completions',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-    body:JSON.stringify({ model:'kimi-latest', temperature:0.5, messages:[{role:'user', content:prompt}] })
+    body:JSON.stringify({ model:'kimi-k3', messages:[{role:'user', content:prompt}] })
   });
   if(res.status===401) throw new Error('API Key 无效或余额不足');
-  if(!res.ok) throw new Error('生成失败（HTTP '+res.status+'）');
+  if(!res.ok){ let m=''; try{ m=(await res.json()).error.message; }catch(e){} throw new Error('生成失败（HTTP '+res.status+'）'+(m?('：'+m):'')); }
   const j=await res.json();
   return (j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
 }
