@@ -259,12 +259,14 @@ document.addEventListener('click', async e=>{
   try{
     const weekKey = fmt(currentMonday());
     const st = collectWeekStats(weekKey);
-    let text;
+    let text=null, aiErr=null;
     if(localStorage.getItem(KIMI_LS)){
-      text = await kimiText(`你是用户的健身教练兼营养师。用户38岁，有血糖偏高问题，目标增肌+提升足球/跑步表现。根据以下本周数据，输出200-300字中文总结：1）训练完成情况点评（点名完成差的日子）2）饮食分析（热量、蛋白质是否达标，结合控糖）3）下周3条具体可执行的建议。语气直接具体，不空谈。\n\n${st.text}`);
-      text = text.trim();
-    } else {
-      text = localSummary(st);
+      try{
+        text = (await kimiText(`你是用户的健身教练兼营养师。用户38岁，有血糖偏高问题，目标增肌+提升足球/跑步表现。根据以下本周数据，输出200-300字中文总结：1）训练完成情况点评（点名完成差的日子）2）饮食分析（热量、蛋白质是否达标，结合控糖）3）下周3条具体可执行的建议。语气直接具体，不空谈。\n\n${st.text}`)).trim();
+      }catch(err){ aiErr=err.message; }
+    }
+    if(!text){ // 无 Key 或 AI 失败 → 本地统计模板兜底
+      text = localSummary(st) + (aiErr? `\n（AI 深度分析失败，已用本地模板。原因：${aiErr}）` : '');
     }
     const all=store.summ; all[weekKey]={text, ts:new Date().toLocaleString('zh-CN')}; store.summ=all; changed();
   }catch(err){ alert('生成失败：'+err.message); }
