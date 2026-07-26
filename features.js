@@ -132,12 +132,14 @@ $('#fbPreview').addEventListener('click', e=>{
 });
 
 // ---- AI 读图 ----
-async function kimiVision(prompt, dataUrl){
+async function kimiVision(prompt, dataUrls){
   if(!localStorage.getItem(KIMI_LS)) throw new Error('请先在「饮食记录」页配置 Moonshot API Key');
+  const imgs=[].concat(dataUrls); // 支持单张或多张
+  const content=[{type:'text',text:prompt}].concat(imgs.map(u=>({type:'image_url',image_url:{url:u}})));
   const j = await kimiChat({
     messages:[
       {role:'system', content:'你是运动数据提取助手，从App截图中提取数字。只输出JSON，找不到的字段填null。'},
-      {role:'user', content:[{type:'text',text:prompt},{type:'image_url',image_url:{url:dataUrl}}]}
+      {role:'user', content:content}
     ]
   }, true);
   const txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
@@ -160,7 +162,7 @@ $('#fbAi').onclick=async ()=>{
   if(!fbImgsData.length){ alert('先上传记录图'); return; }
   $('#fbStatus').textContent='AI 读图中…';
   try{
-    const j = await kimiVision('这是足球运动数据App（Possiball神仙球）的记录截图。提取：{"dur":本场总用时分钟数字,"format":"几人制如11人制","pos":"位置","dist":本场距离km数字（7261m填7.3）,"hi":高强度距离m数字,"sprint":冲刺次数,"max":最大瞬时速度m/s数字,"score":五维评分数字}', fbImgsData[0]);
+    const j = await kimiVision('这是足球运动数据App（Possiball神仙球）的记录截图，共'+fbImgsData.length+'张，数据分散在不同页面：「跑动分析」页有本场总用时、几人制、本场距离(m)、高强度距离(m)、冲刺次数、最大瞬时速度(m/s)；「战术评价」页有五维评分。请跨所有图片提取：{"dur":本场总用时的分钟数（1:24:48填85，0:56:37填57）,"format":"几人制如11人制","pos":"位置，找不到填null","dist":本场距离换算成km（7261m填7.3）,"hi":高强度距离m数字,"sprint":冲刺次数,"max":最大瞬时速度m/s数字,"score":五维评分数字}', fbImgsData);
     if(j.dur!=null) $('#fbDur').value=j.dur;
     if(j.format) $('#fbFormat').value=j.format;
     if(j.pos) $('#fbPos').value=j.pos;
