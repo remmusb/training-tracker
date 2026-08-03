@@ -29,10 +29,60 @@ function openMovePicker(srcId){
   mvSheet.style.display = 'flex';
 }
 
+// 动作要点弹层
+const ptsSheet = document.createElement('div');
+ptsSheet.id = 'ptsSheet';
+ptsSheet.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:99;display:none;align-items:center;justify-content:center;padding:20px';
+document.body.appendChild(ptsSheet);
+ptsSheet.addEventListener('click', e=>{ if(e.target===ptsSheet || e.target.id==='ptsClose') ptsSheet.style.display='none'; });
+
+function findExByKey(key){
+  const [dayId, idx] = key.split('_');
+  const day = PLAN.find(p=>p.id===dayId);
+  return day ? day.ex[+idx] : null;
+}
+function openPtsSheet(key){
+  const ex = findExByKey(key);
+  if(!ex) return;
+  const pts = (typeof EX_PTS==='object' && EX_PTS[ex.n]) || [];
+  const imgQ = encodeURIComponent(ex.n + ' 动作 要领');
+  ptsSheet.innerHTML = `
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;padding:18px 16px">
+      <div style="font-weight:800;font-size:16px">${ex.n}</div>
+      <div style="font-size:12.5px;color:var(--sub);margin:2px 0 10px">${ex.sr}${ex.w?' · '+ex.w:''}${ex.rest?' · 休 '+ex.rest:''}</div>
+      ${pts.length? `<div style="font-size:13.5px;line-height:1.8">${pts.map(p=>`<div style="padding:6px 0 6px 22px;position:relative;border-bottom:1px solid #f1f5f9"><span style="position:absolute;left:2px;color:var(--green);font-weight:800">•</span>${p}</div>`).join('')}</div>` : '<div style="font-size:13px;color:var(--sub)">暂无文字要点，可看示范视频和图示。</div>'}
+      ${ex.tip?`<div style="font-size:12.5px;color:var(--amber);margin-top:8px">💡 ${ex.tip}</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+        <a class="btn small" style="text-decoration:none" href="${bilibili(ex.demo)}" target="_blank" rel="noopener">🎬 示范视频</a>
+        <a class="btn ghost small" style="text-decoration:none" href="https://www.bing.com/images/search?q=${imgQ}" target="_blank" rel="noopener">🖼️ 动作图示</a>
+        <button class="btn ghost small" id="ptsClose">关闭</button>
+      </div>
+    </div>`;
+  ptsSheet.style.display = 'flex';
+}
+
 // 捕获阶段拦截迁移按钮（避免触发卡片折叠）
 document.addEventListener('click', e=>{
   const mv = e.target.closest('.mv-btn');
   if(mv){ e.stopPropagation(); e.preventDefault(); openMovePicker(mv.dataset.mv); return; }
+  const pt = e.target.closest('[data-pts]');
+  if(pt){ e.stopPropagation(); e.preventDefault(); openPtsSheet(pt.dataset.pts); return; }
+  const dx = e.target.closest('[data-delx]');
+  if(dx){
+    e.stopPropagation(); e.preventDefault();
+    const ex = findExByKey(dx.dataset.delx);
+    if(!confirm(`确定把「${ex?ex.n:dx.dataset.delx}」从训练计划中删除吗？\n删除后所有周都不再显示，可随时在训练页底部恢复。`)) return;
+    const d = store.planDel; d[dx.dataset.delx]=true; store.planDel=d;
+    changed(); renderTrain();
+    return;
+  }
+  const rp = e.target.closest('[data-restoreplan]');
+  if(rp){
+    e.stopPropagation(); e.preventDefault();
+    if(!confirm('恢复全部已隐藏的动作？')) return;
+    store.planDel = {}; changed(); renderTrain();
+    return;
+  }
   const um = e.target.closest('[data-unmove]');
   if(um){
     e.stopPropagation(); e.preventDefault();
@@ -155,7 +205,7 @@ $('#rnAi').onclick=async ()=>{
     if(j.pace) $('#rnPace').value=j.pace;
     if(j.hr!=null) $('#rnHr').value=j.hr;
     if(j.kcal!=null) $('#rnKcal').value=j.kcal;
-    $('#rnStatus').textContent='已填入，请核对';
+    $('#rnStatus').textContent='已填入，可直接修改后保存';
   }catch(err){ $('#rnStatus').textContent='⚠️ '+err.message; }
 };
 $('#fbAi').onclick=async ()=>{
@@ -171,7 +221,7 @@ $('#fbAi').onclick=async ()=>{
     if(j.sprint!=null) $('#fbSprint').value=j.sprint;
     if(j.max!=null) $('#fbMax').value=j.max;
     if(j.score!=null) $('#fbScore').value=j.score;
-    $('#fbStatus').textContent='已填入，请核对';
+    $('#fbStatus').textContent='已填入，可直接修改后保存';
   }catch(err){ $('#fbStatus').textContent='⚠️ '+err.message; }
 };
 
