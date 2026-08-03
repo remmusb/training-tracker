@@ -9,6 +9,7 @@ function bilibili(kw){ return 'https://search.bilibili.com/all?keyword=' + encod
 let weekOffset = 0; // 0=本周
 const CHECK_KEY='train2026_checks_v1', BODY_KEY='train2026_body_v1', FOOD_KEY='train2026_food_v1';
 const MOVES_KEY='train2026_moves_v1', ACT_KEY='train2026_act_v1', SUMM_KEY='train2026_summ_v1';
+const PLAN_DEL_KEY='train2026_plandel_v1';
 const store = {
   get checks(){ try{return JSON.parse(localStorage.getItem(CHECK_KEY))||{}}catch(e){return{}} },
   set checks(v){ localStorage.setItem(CHECK_KEY, JSON.stringify(v)); },
@@ -21,7 +22,9 @@ const store = {
   get act(){ try{return JSON.parse(localStorage.getItem(ACT_KEY))||{}}catch(e){return{}} },
   set act(v){ localStorage.setItem(ACT_KEY, JSON.stringify(v)); },
   get summ(){ try{return JSON.parse(localStorage.getItem(SUMM_KEY))||{}}catch(e){return{}} },
-  set summ(v){ localStorage.setItem(SUMM_KEY, JSON.stringify(v)); }
+  set summ(v){ localStorage.setItem(SUMM_KEY, JSON.stringify(v)); },
+  get planDel(){ try{return JSON.parse(localStorage.getItem(PLAN_DEL_KEY))||{}}catch(e){return{}} },
+  set planDel(v){ localStorage.setItem(PLAN_DEL_KEY, JSON.stringify(v)); }
 };
 // 首次写入体测基准记录
 if(!store.body){
@@ -60,7 +63,9 @@ function renderTrain(){
     const srcDay = srcOf[day.id] ? PLAN.find(p=>p.id===srcOf[day.id]) : day;
     const moved = srcDay.id !== day.id;
     const exHtml = srcDay.ex.map((e,i)=>{
-      const key = `${srcDay.id}_${i}`; total++;
+      const key = `${srcDay.id}_${i}`;
+      if(store.planDel[key]) return ''; // 已从计划中删除的项目
+      total++;
       const on = !!checks[key]; if(on) done++;
       const meta = [`<b>${e.sr}</b>`];
       if(e.w) meta.push(e.w);
@@ -71,6 +76,7 @@ function renderTrain(){
           <div class="ex-name">${e.n}</div>
           <div class="ex-meta">${meta.join('<span>·</span>')}</div>
           ${e.tip?`<div class="ex-tip">💡 ${e.tip}</div>`:''}
+          <div class="ex-acts"><span class="ex-act" data-pts="${key}">📖 要点</span><span class="ex-act danger" data-delx="${key}">删除此项</span></div>
         </div>
         <span class="tag ${e.tag}">${e.tag==='warm'?'热身':e.tag==='main'?'训练':'恢复'}</span>
         <a class="demo" href="${bilibili(e.demo)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">示范</a>
@@ -94,8 +100,10 @@ function renderTrain(){
       </div>
     </div>`;
   }).join('');
+  const delCount = Object.keys(store.planDel).length;
+  const restoreHtml = delCount ? `<div style="text-align:center;padding:2px 0 14px"><span class="ex-act" data-restoreplan="1">↩︎ 已隐藏 ${delCount} 个动作，点这里恢复全部</span></div>` : '';
   const summCard = (typeof weekReportCardHtml==='function') ? weekReportCardHtml(weekKey) : '';
-  $('#tab-train').innerHTML = html + summCard;
+  $('#tab-train').innerHTML = html + restoreHtml + summCard;
   const pct = total? Math.round(done/total*100):0;
   $('#pFill').style.width = pct+'%';
   $('#pText').textContent = `本周完成 ${done}/${total} 项 · ${pct}%`;
@@ -103,6 +111,7 @@ function renderTrain(){
 
 // 事件委托：打卡 + 折叠
 $('#tab-train').addEventListener('click', e=>{
+  if(e.target.closest('[data-pts],[data-delx],[data-restoreplan]')) return; // 由 features.js 捕获阶段处理
   const exRow = e.target.closest('.ex');
   if(exRow && !e.target.closest('.demo')){
     const key = exRow.dataset.key;
@@ -176,7 +185,7 @@ $('#bcTable').addEventListener('click', e=>{
   const arr=store.body; arr.splice(+d.dataset.i,1); store.body=arr; changed(); renderBody();
 });
 $('#exportBtn').onclick=()=>{
-  const data = { 打卡: store.checks, 体测: store.body, 饮食: store.food, 迁移: store.moves, 运动记录: store.act, 周报: store.summ, 导出时间: new Date().toLocaleString('zh-CN') };
+  const data = { 打卡: store.checks, 体测: store.body, 饮食: store.food, 迁移: store.moves, 运动记录: store.act, 周报: store.summ, 隐藏动作: store.planDel, 导出时间: new Date().toLocaleString('zh-CN') };
   const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = `训练数据_${fmt(new Date())}.json`; a.click();
@@ -272,7 +281,7 @@ async function pushNow(){
       method:'POST',
       headers:{ 'apikey':cfg.key, 'Authorization':'Bearer '+cfg.key,
         'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates' },
-      body: JSON.stringify({ id:'main', data:{ checks:store.checks, body:store.body, food:store.food, moves:store.moves, act:store.act, summ:store.summ, updated:meta.get().updated } })
+      body: JSON.stringify({ id:'main', data:{ checks:store.checks, body:store.body, food:store.food, moves:store.moves, act:store.act, summ:store.summ, planDel:store.planDel, updated:meta.get().updated } })
     });
     if(!res.ok) throw new Error(res.status);
     setSyncStatus('☁️ 已同步 '+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}), '#4ade80');
@@ -297,6 +306,7 @@ async function pullNow(showAlerts){
         if(remote.moves) localStorage.setItem(MOVES_KEY, JSON.stringify(remote.moves));
         if(remote.act) localStorage.setItem(ACT_KEY, JSON.stringify(remote.act));
         if(remote.summ) localStorage.setItem(SUMM_KEY, JSON.stringify(remote.summ));
+        if(remote.planDel) localStorage.setItem(PLAN_DEL_KEY, JSON.stringify(remote.planDel));
         meta.set({updated:ru});
         renderTrain(); renderBody();
         if(!$('#tab-food').classList.contains('hidden')) renderFood();
@@ -344,6 +354,7 @@ $('#importFile').addEventListener('change', e=>{
       if(d.迁移) localStorage.setItem(MOVES_KEY, JSON.stringify(d.迁移));
       if(d.运动记录) localStorage.setItem(ACT_KEY, JSON.stringify(d.运动记录));
       if(d.周报) localStorage.setItem(SUMM_KEY, JSON.stringify(d.周报));
+      if(d.隐藏动作) localStorage.setItem(PLAN_DEL_KEY, JSON.stringify(d.隐藏动作));
       changed(); renderTrain(); renderBody();
       alert('导入成功');
     }catch(err){ alert('导入失败：文件格式不正确'); }
@@ -410,7 +421,7 @@ function renderFood(){
       groups[m].map(e=>`<div class="ex" style="cursor:default">
         <div class="ex-info">
           <div class="ex-name">${e.name}</div>
-          <div class="ex-meta"><b>${e.qty} × ${e.unit||'份'}</b><span>·</span>${Math.round(e.kcal)} kcal${e.p?`<span>·</span>蛋白质 ${Math.round(e.p*10)/10} g`:''}</div>
+          <div class="ex-meta"><b>${e.qty} × ${e.unit||'份'}</b><span>·</span>${Math.round(e.kcal)} kcal${e.p?`<span>·</span>蛋白质 ${Math.round(e.p*10)/10} g`:''}${e.custom?`<span>·</span>${e.custom}`:''}</div>
         </div>
         <span class="del" data-fi="${e.i}">删除</span>
       </div>`).join('');
@@ -437,7 +448,8 @@ function foodAutoCalc(){
   if(f){
     $('#fUnit').textContent = '× ' + f[1];
     $('#fKcal').value = Math.round(f[2]*qty);
-    $('#fProtein').textContent = '蛋白质约 ' + (Math.round(f[3]*qty*10)/10) + ' g';
+    $('#fP').value = Math.round(f[3]*qty*10)/10;
+    $('#fProtein').textContent = '已按食物库估算，均可修改';
   } else {
     $('#fUnit').textContent = ''; $('#fProtein').textContent = '';
   }
@@ -453,13 +465,17 @@ $('#foodAdd').onclick=()=>{
   if(kcal<=0){ alert('请填写热量（选库中食物会自动算）'); return; }
   const f = FOOD_DB.find(x=>x[0]===name);
   const qty = parseFloat($('#fQty').value)||1;
+  const cusName = $('#fCusName').value.trim(), cusVal = $('#fCusVal').value.trim();
   const entry = {
     meal: $('#fMeal').value, name, qty,
     unit: f? f[1] : '份',
-    kcal, p: f? Math.round(f[3]*qty*10)/10 : 0
+    kcal,
+    p: parseFloat($('#fP').value) || (f? Math.round(f[3]*qty*10)/10 : 0),
+    custom: (cusName && cusVal) ? `${cusName} ${cusVal}` : ''
   };
   const fd = store.food; (fd.logs[foodDate]=fd.logs[foodDate]||[]).push(entry); store.food=fd;
-  $('#fName').value=''; $('#fKcal').value=''; $('#fQty').value=1; foodAutoCalc();
+  $('#fName').value=''; $('#fKcal').value=''; $('#fP').value=''; $('#fQty').value=1;
+  $('#fCusName').value=''; $('#fCusVal').value=''; foodAutoCalc();
   changed(); renderFood();
 };
 
@@ -598,15 +614,21 @@ function renderSnapResult(dataUrl, result){
         ${['早餐','上午加餐','午餐','下午加餐','练前餐','练后餐','跑前餐','跑步补给','晚餐','睡前','其他'].map(m=>`<option>${m}</option>`).join('')}
       </select>
     </div>
+    <div class="note" style="padding:0 0 8px">所有字段都可直接修改，改完再入库：</div>
     ${items.map((x,i)=>`
-      <div class="ex" style="cursor:default">
-        <input type="checkbox" class="snap-chk" data-i="${i}" checked style="width:18px;height:18px;accent-color:var(--green)">
-        <div class="ex-info">
-          <div class="ex-name">${x.name}</div>
-          <div class="ex-meta"><b>${x.qty||1} × ${x.unit||'份'}</b>${x.p?`<span>·</span>蛋白质 ${Math.round(x.p*10)/10} g`:''}</div>
+      <div class="ex" style="cursor:default;flex-wrap:wrap;gap:8px">
+        <input type="checkbox" class="snap-chk" data-i="${i}" checked style="width:18px;height:18px;accent-color:var(--green);flex:none">
+        <div class="ex-info" style="min-width:150px">
+          <input type="text" class="snap-name" data-i="${i}" value="${x.name}" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13.5px;font-weight:650">
+          <div style="display:flex;gap:4px;align-items:center;margin-top:5px;font-size:12px;color:var(--sub)">
+            <input type="number" class="snap-qty" data-i="${i}" value="${x.qty||1}" step="0.5" style="width:56px;border:1px solid var(--line);border-radius:8px;padding:5px;font-size:12.5px"> ×
+            <input type="text" class="snap-unit" data-i="${i}" value="${x.unit||'份'}" style="width:80px;border:1px solid var(--line);border-radius:8px;padding:5px;font-size:12.5px">
+          </div>
         </div>
-        <input type="number" class="snap-kcal" data-i="${i}" value="${Math.round(x.kcal)}" style="width:72px;border:1px solid var(--line);border-radius:8px;padding:6px;font-size:13.5px;text-align:right">
-        <span style="font-size:12px;color:var(--sub)">kcal</span>
+        <div style="display:flex;gap:6px;align-items:center;flex:none">
+          <input type="number" class="snap-kcal" data-i="${i}" value="${Math.round(x.kcal)}" style="width:68px;border:1px solid var(--line);border-radius:8px;padding:6px;font-size:13px;text-align:right"><span style="font-size:11.5px;color:var(--sub)">kcal</span>
+          <input type="number" class="snap-p" data-i="${i}" value="${Math.round((x.p||0)*10)/10}" step="0.5" style="width:56px;border:1px solid var(--line);border-radius:8px;padding:6px;font-size:13px;text-align:right"><span style="font-size:11.5px;color:var(--sub)">g蛋白</span>
+        </div>
       </div>`).join('')}
     <div style="display:flex;gap:10px;margin-top:10px">
       <button class="btn" id="snapAddAll">✓ 加入今日记录</button>
@@ -620,8 +642,16 @@ function renderSnapResult(dataUrl, result){
     document.querySelectorAll('.snap-chk').forEach(chk=>{
       if(!chk.checked) return;
       const i=+chk.dataset.i; const x=items[i];
-      const kcal=parseFloat(document.querySelector(`.snap-kcal[data-i="${i}"]`).value)||x.kcal;
-      arr.push({ meal, name:x.name, qty:x.qty||1, unit:x.unit||'份', kcal, p:Math.round((x.p||0)*10)/10 });
+      const val = sel=>{ const el=document.querySelector(`${sel}[data-i="${i}"]`); return el?el.value:''; };
+      const name=val('.snap-name').trim()||x.name;
+      const kcal=parseFloat(val('.snap-kcal'))||x.kcal;
+      arr.push({
+        meal, name,
+        qty: parseFloat(val('.snap-qty'))||x.qty||1,
+        unit: val('.snap-unit').trim()||x.unit||'份',
+        kcal,
+        p: parseFloat(val('.snap-p'))||0
+      });
       n++;
     });
     store.food=fd; changed(); renderFood();
