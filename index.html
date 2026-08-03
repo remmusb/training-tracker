@@ -70,6 +70,9 @@
   .tag.stretch{background:var(--violet-soft);color:var(--violet)}
   .demo{flex:none;font-size:12px;font-weight:600;color:var(--blue);background:var(--blue-soft);border-radius:8px;padding:6px 10px;text-decoration:none;white-space:nowrap}
   .demo:active{transform:scale(.95)}
+  .ex-acts{margin-top:4px}
+  .ex-act{font-size:11.5px;color:var(--blue);cursor:pointer;font-weight:600;margin-right:12px;white-space:nowrap}
+  .ex-act.danger{color:#ef4444}
   .diet-link{display:block;margin:8px 12px 12px;font-size:12.5px;color:var(--green);font-weight:600;cursor:pointer}
   .diet-link::before{content:"🍚 "}
 
@@ -239,6 +242,9 @@
         <div><label>食物（可从库中选，也可自填）</label><input type="text" id="fName" list="foodNames" placeholder="如：鸡胸肉"><datalist id="foodNames"></datalist></div>
         <div><label>数量 <span id="fUnit" style="color:var(--blue)"></span></label><input type="number" id="fQty" step="0.5" min="0.5" value="1"></div>
         <div><label>热量 kcal（选库中食物自动算，可改）</label><input type="number" id="fKcal" placeholder="0"></div>
+        <div><label>蛋白质 g（自动估算，可改）</label><input type="number" id="fP" step="0.5" placeholder="0"></div>
+        <div><label>自定义营养素（名称，如 膳食纤维/钙）</label><input type="text" id="fCusName" placeholder="可留空"></div>
+        <div><label>自定义营养素含量（如 8g / 300mg）</label><input type="text" id="fCusVal" placeholder="可留空"></div>
       </div>
       <div style="padding:0 14px 14px;display:flex;align-items:center;gap:12px">
         <button class="btn" id="foodAdd">添加</button>
@@ -433,13 +439,13 @@ create policy "anon_all" on training_data
     </div>
   </section>
 
-  <footer>数据默认保存在本浏览器 · 在「体测报告 → 云同步」配置后多设备互通 · v20260726</footer>
+  <footer>数据默认保存在本浏览器 · 在「体测报告 → 云同步」配置后多设备互通 · v20260727</footer>
 </div>
 
-<script src="data.js?v=20260726"></script>
+<script src="data.js?v=20260727"></script>
 
-<script src="app.js?v=20260726"></script>
+<script src="app.js?v=20260727"></script>
 
-<script src="features.js?v=20260726"></script>
+<script src="features.js?v=20260727"></script>
 </body>
 </html>
