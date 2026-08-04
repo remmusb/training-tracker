@@ -29,6 +29,79 @@ function openMovePicker(srcId){
   mvSheet.style.display = 'flex';
 }
 
+/* ================= 自助添加动作 ================= */
+// 动作库：由 7 天计划中按名称去重得到，自带组次/重量/要点/示范参数
+const EX_LIB = [];
+PLAN.forEach(d=>d.ex.forEach(e=>{ if(!EX_LIB.some(x=>x.n===e.n)) EX_LIB.push(e); }));
+
+const axSheet = document.createElement('div');
+axSheet.id = 'axSheet';
+axSheet.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:99;display:none;align-items:flex-end;justify-content:center';
+axSheet.innerHTML = `
+  <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:780px;padding:18px 16px 26px;max-height:88vh;overflow-y:auto">
+    <div style="font-weight:800;font-size:15px;margin-bottom:4px" id="axTitle">添加动作</div>
+    <div style="font-size:12px;color:var(--sub);margin-bottom:12px">从动作库选择会自动带入组次、重量、要点和示范视频，都可再改；也可以完全自己输入。</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="grid-column:1/-1"><label style="font-size:12px;color:var(--sub);display:block;margin-bottom:4px">动作名称（从库中选或自己输入）</label>
+        <input type="text" id="axName" list="exLibList" placeholder="如：哑铃平板卧推" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:14px">
+        <datalist id="exLibList"></datalist></div>
+      <div><label style="font-size:12px;color:var(--sub);display:block;margin-bottom:4px">组次 × 次数 / 时长</label>
+        <input type="text" id="axSr" placeholder="如 3×10 或 20 min" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:14px"></div>
+      <div><label style="font-size:12px;color:var(--sub);display:block;margin-bottom:4px">重量 / 强度（可空）</label>
+        <input type="text" id="axW" placeholder="如 8–10 kg/只" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:14px"></div>
+      <div><label style="font-size:12px;color:var(--sub);display:block;margin-bottom:4px">组间休息（可空）</label>
+        <input type="text" id="axRest" placeholder="如 60秒" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:14px"></div>
+      <div><label style="font-size:12px;color:var(--sub);display:block;margin-bottom:4px">类型</label>
+        <select id="axTag" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:14px;background:#fff">
+          <option value="warm">热身</option><option value="main" selected>训练</option><option value="stretch">恢复/拉伸</option>
+        </select></div>
+      <div style="grid-column:1/-1"><label style="font-size:12px;color:var(--sub);display:block;margin-bottom:4px">提示（可空）</label>
+        <input type="text" id="axTip" placeholder="如：左手先做" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:14px"></div>
+    </div>
+    <button class="btn" id="axSave" style="width:100%;margin-top:14px">添加到当天计划</button>
+    <button class="btn ghost" id="axCancel" style="width:100%;margin-top:8px">取消</button>
+  </div>`;
+document.body.appendChild(axSheet);
+document.getElementById('exLibList').innerHTML = EX_LIB.map(e=>`<option value="${e.n}">`).join('');
+axSheet.addEventListener('click', e=>{ if(e.target===axSheet || e.target.id==='axCancel') axSheet.style.display='none'; });
+
+let axDay = null;
+document.getElementById('axName').addEventListener('input', ()=>{
+  const f = EX_LIB.find(x=>x.n===document.getElementById('axName').value.trim());
+  if(f){
+    document.getElementById('axSr').value = f.sr||'';
+    document.getElementById('axW').value = f.w||'';
+    document.getElementById('axRest').value = f.rest||'';
+    document.getElementById('axTag').value = f.tag||'main';
+    document.getElementById('axTip').value = f.tip||'';
+  }
+});
+function openAddSheet(dayId){
+  axDay = dayId;
+  const day = PLAN.find(p=>p.id===dayId);
+  document.getElementById('axTitle').textContent = `添加动作到「${day?day.dow+' ':''}${day?day.title:''}」`;
+  ['axName','axSr','axW','axRest','axTip'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('axTag').value = 'main';
+  axSheet.style.display = 'flex';
+}
+document.getElementById('axSave').onclick = ()=>{
+  const n = document.getElementById('axName').value.trim();
+  if(!n){ alert('请填写动作名称'); return; }
+  const f = EX_LIB.find(x=>x.n===n);
+  const ex = {
+    n,
+    sr: document.getElementById('axSr').value.trim() || '自定',
+    w: document.getElementById('axW').value.trim(),
+    rest: document.getElementById('axRest').value.trim(),
+    tag: document.getElementById('axTag').value,
+    tip: document.getElementById('axTip').value.trim(),
+    demo: f ? f.demo : (n + ' 教学')
+  };
+  const pa = store.planAdd; (pa[axDay]=pa[axDay]||[]).push(ex); store.planAdd = pa;
+  axSheet.style.display = 'none';
+  changed(); renderTrain();
+};
+
 // 动作要点弹层
 const ptsSheet = document.createElement('div');
 ptsSheet.id = 'ptsSheet';
@@ -38,6 +111,10 @@ ptsSheet.addEventListener('click', e=>{ if(e.target===ptsSheet || e.target.id===
 
 function findExByKey(key){
   const [dayId, idx] = key.split('_');
+  if(idx && idx[0]==='a'){ // 自选添加的动作
+    const adds = store.planAdd[dayId] || [];
+    return adds[+idx.slice(1)] || null;
+  }
   const day = PLAN.find(p=>p.id===dayId);
   return day ? day.ex[+idx] : null;
 }
@@ -67,12 +144,25 @@ document.addEventListener('click', e=>{
   if(mv){ e.stopPropagation(); e.preventDefault(); openMovePicker(mv.dataset.mv); return; }
   const pt = e.target.closest('[data-pts]');
   if(pt){ e.stopPropagation(); e.preventDefault(); openPtsSheet(pt.dataset.pts); return; }
+  const ax = e.target.closest('[data-addex]');
+  if(ax){ e.stopPropagation(); e.preventDefault(); openAddSheet(ax.dataset.addex); return; }
   const dx = e.target.closest('[data-delx]');
   if(dx){
     e.stopPropagation(); e.preventDefault();
-    const ex = findExByKey(dx.dataset.delx);
-    if(!confirm(`确定把「${ex?ex.n:dx.dataset.delx}」从训练计划中删除吗？\n删除后所有周都不再显示，可随时在训练页底部恢复。`)) return;
-    const d = store.planDel; d[dx.dataset.delx]=true; store.planDel=d;
+    const key = dx.dataset.delx;
+    const ex = findExByKey(key);
+    const idxPart = key.split('_')[1]||'';
+    if(idxPart[0]==='a'){ // 自选动作：直接从添加列表移除
+      if(!confirm(`把「${ex?ex.n:key}」从计划中移除？\n这是你自己添加的动作，移除后如需恢复要重新添加。`)) return;
+      const dayId = key.split('_')[0];
+      const pa = store.planAdd; (pa[dayId]||[]).splice(+idxPart.slice(1),1);
+      if(pa[dayId] && !pa[dayId].length) delete pa[dayId];
+      store.planAdd = pa;
+      changed(); renderTrain();
+      return;
+    }
+    if(!confirm(`确定把「${ex?ex.n:key}」从训练计划中删除吗？\n删除后所有周都不再显示，可随时在训练页底部恢复。`)) return;
+    const d = store.planDel; d[key]=true; store.planDel=d;
     changed(); renderTrain();
     return;
   }
