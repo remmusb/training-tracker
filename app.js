@@ -10,6 +10,7 @@ let weekOffset = 0; // 0=本周
 const CHECK_KEY='train2026_checks_v1', BODY_KEY='train2026_body_v1', FOOD_KEY='train2026_food_v1';
 const MOVES_KEY='train2026_moves_v1', ACT_KEY='train2026_act_v1', SUMM_KEY='train2026_summ_v1';
 const PLAN_DEL_KEY='train2026_plandel_v1';
+const PLAN_ADD_KEY='train2026_planadd_v1';
 const store = {
   get checks(){ try{return JSON.parse(localStorage.getItem(CHECK_KEY))||{}}catch(e){return{}} },
   set checks(v){ localStorage.setItem(CHECK_KEY, JSON.stringify(v)); },
@@ -24,7 +25,9 @@ const store = {
   get summ(){ try{return JSON.parse(localStorage.getItem(SUMM_KEY))||{}}catch(e){return{}} },
   set summ(v){ localStorage.setItem(SUMM_KEY, JSON.stringify(v)); },
   get planDel(){ try{return JSON.parse(localStorage.getItem(PLAN_DEL_KEY))||{}}catch(e){return{}} },
-  set planDel(v){ localStorage.setItem(PLAN_DEL_KEY, JSON.stringify(v)); }
+  set planDel(v){ localStorage.setItem(PLAN_DEL_KEY, JSON.stringify(v)); },
+  get planAdd(){ try{return JSON.parse(localStorage.getItem(PLAN_ADD_KEY))||{}}catch(e){return{}} },
+  set planAdd(v){ localStorage.setItem(PLAN_ADD_KEY, JSON.stringify(v)); }
 };
 // 首次写入体测基准记录
 if(!store.body){
@@ -62,8 +65,7 @@ function renderTrain(){
     }
     const srcDay = srcOf[day.id] ? PLAN.find(p=>p.id===srcOf[day.id]) : day;
     const moved = srcDay.id !== day.id;
-    const exHtml = srcDay.ex.map((e,i)=>{
-      const key = `${srcDay.id}_${i}`;
+    const exRow = (e, key)=>{
       if(store.planDel[key]) return ''; // 已从计划中删除的项目
       total++;
       const on = !!checks[key]; if(on) done++;
@@ -81,8 +83,12 @@ function renderTrain(){
         <span class="tag ${e.tag}">${e.tag==='warm'?'热身':e.tag==='main'?'训练':'恢复'}</span>
         <a class="demo" href="${bilibili(e.demo)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">示范</a>
       </div>`;
-    }).join('');
-    const dayDone = srcDay.ex.filter((e,i)=>checks[`${srcDay.id}_${i}`]).length;
+    };
+    const adds = store.planAdd[srcDay.id] || [];
+    const exHtml = srcDay.ex.map((e,i)=>exRow(e, `${srcDay.id}_${i}`)).join('')
+      + adds.map((e,j)=>exRow(e, `${srcDay.id}_a${j}`)).join('');
+    const dayDone = srcDay.ex.filter((e,i)=>checks[`${srcDay.id}_${i}`]).length + adds.filter((e,j)=>checks[`${srcDay.id}_a${j}`]).length;
+    const dayTotal = srcDay.ex.length + adds.length;
     return `<div class="card day-card ${isCur&&day.id===todayDow?'open':''}" data-day="${day.id}">
       <div class="day-head">
         <div class="l">
@@ -91,12 +97,13 @@ function renderTrain(){
           <div class="day-meta"><span>🕗 ${srcDay.time}</span><span>🎒 ${srcDay.equip}</span><span>🍚 ${srcDay.diet}</span></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;align-self:center">
-          <span class="day-count ${dayDone===srcDay.ex.length?'done':''}">${dayDone}/${srcDay.ex.length}</span>
+          <span class="day-count ${dayDone===dayTotal?'done':''}">${dayDone}/${dayTotal}</span>
           ${!moved?`<button class="btn ghost small mv-btn" data-mv="${day.id}">⇄ 迁移</button>`:''}
         </div>
       </div>
       <div class="day-body">${exHtml}
         <span class="diet-link" data-diet="${srcDay.dietId}">查看今日饮食安排 →</span>
+        <span class="addex-link" data-addex="${srcDay.id}">＋ 添加动作</span>
       </div>
     </div>`;
   }).join('');
@@ -111,7 +118,7 @@ function renderTrain(){
 
 // 事件委托：打卡 + 折叠
 $('#tab-train').addEventListener('click', e=>{
-  if(e.target.closest('[data-pts],[data-delx],[data-restoreplan]')) return; // 由 features.js 捕获阶段处理
+  if(e.target.closest('[data-pts],[data-delx],[data-restoreplan],[data-addex]')) return; // 由 features.js 捕获阶段处理
   const exRow = e.target.closest('.ex');
   if(exRow && !e.target.closest('.demo')){
     const key = exRow.dataset.key;
@@ -185,7 +192,7 @@ $('#bcTable').addEventListener('click', e=>{
   const arr=store.body; arr.splice(+d.dataset.i,1); store.body=arr; changed(); renderBody();
 });
 $('#exportBtn').onclick=()=>{
-  const data = { 打卡: store.checks, 体测: store.body, 饮食: store.food, 迁移: store.moves, 运动记录: store.act, 周报: store.summ, 隐藏动作: store.planDel, 导出时间: new Date().toLocaleString('zh-CN') };
+  const data = { 打卡: store.checks, 体测: store.body, 饮食: store.food, 迁移: store.moves, 运动记录: store.act, 周报: store.summ, 隐藏动作: store.planDel, 自选动作: store.planAdd, 导出时间: new Date().toLocaleString('zh-CN') };
   const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = `训练数据_${fmt(new Date())}.json`; a.click();
@@ -281,7 +288,7 @@ async function pushNow(){
       method:'POST',
       headers:{ 'apikey':cfg.key, 'Authorization':'Bearer '+cfg.key,
         'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates' },
-      body: JSON.stringify({ id:'main', data:{ checks:store.checks, body:store.body, food:store.food, moves:store.moves, act:store.act, summ:store.summ, planDel:store.planDel, updated:meta.get().updated } })
+      body: JSON.stringify({ id:'main', data:{ checks:store.checks, body:store.body, food:store.food, moves:store.moves, act:store.act, summ:store.summ, planDel:store.planDel, planAdd:store.planAdd, updated:meta.get().updated } })
     });
     if(!res.ok) throw new Error(res.status);
     setSyncStatus('☁️ 已同步 '+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}), '#4ade80');
@@ -307,6 +314,7 @@ async function pullNow(showAlerts){
         if(remote.act) localStorage.setItem(ACT_KEY, JSON.stringify(remote.act));
         if(remote.summ) localStorage.setItem(SUMM_KEY, JSON.stringify(remote.summ));
         if(remote.planDel) localStorage.setItem(PLAN_DEL_KEY, JSON.stringify(remote.planDel));
+        if(remote.planAdd) localStorage.setItem(PLAN_ADD_KEY, JSON.stringify(remote.planAdd));
         meta.set({updated:ru});
         renderTrain(); renderBody();
         if(!$('#tab-food').classList.contains('hidden')) renderFood();
@@ -355,6 +363,7 @@ $('#importFile').addEventListener('change', e=>{
       if(d.运动记录) localStorage.setItem(ACT_KEY, JSON.stringify(d.运动记录));
       if(d.周报) localStorage.setItem(SUMM_KEY, JSON.stringify(d.周报));
       if(d.隐藏动作) localStorage.setItem(PLAN_DEL_KEY, JSON.stringify(d.隐藏动作));
+      if(d.自选动作) localStorage.setItem(PLAN_ADD_KEY, JSON.stringify(d.自选动作));
       changed(); renderTrain(); renderBody();
       alert('导入成功');
     }catch(err){ alert('导入失败：文件格式不正确'); }
