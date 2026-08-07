@@ -449,10 +449,23 @@ $('#foodTarget').addEventListener('change', ()=>{
   const fd = store.food; fd.targets[foodDate]=v; store.food=fd; changed(); renderFood();
 });
 
-// 食物库联动
-$('#foodNames').innerHTML = FOOD_DB.map(f=>`<option value="${f[0]}">`).join('');
+// 食物库联动（内置 FOOD_DB + 我的自定义食物库）
+const FOOD_LIB_KEY='train2026_foodlib_v1';
+function foodLibCustom(){ try{return JSON.parse(localStorage.getItem(FOOD_LIB_KEY))||[]}catch(e){return[]} }
+function allFoods(){ return FOOD_DB.concat(foodLibCustom()); }
+function refreshFoodNames(){ $('#foodNames').innerHTML = allFoods().map(f=>`<option value="${f[0]}">`).join(''); }
+function saveFoodToLib(name, unit, kcal, p){
+  if(!name) return false;
+  if(FOOD_DB.some(f=>f[0]===name) || foodLibCustom().some(f=>f[0]===name)) return false;
+  const lib=foodLibCustom();
+  lib.push([name, unit||'份', Math.round((+kcal||0)*10)/10, Math.round((+p||0)*10)/10]);
+  localStorage.setItem(FOOD_LIB_KEY, JSON.stringify(lib));
+  refreshFoodNames();
+  return true;
+}
+refreshFoodNames();
 function foodAutoCalc(){
-  const f = FOOD_DB.find(x=>x[0]===$('#fName').value.trim());
+  const f = allFoods().find(x=>x[0]===$('#fName').value.trim());
   const qty = parseFloat($('#fQty').value)||1;
   if(f){
     $('#fUnit').textContent = '× ' + f[1];
@@ -472,7 +485,7 @@ $('#foodAdd').onclick=()=>{
   const kcal = parseFloat($('#fKcal').value)||0;
   if(!name){ alert('请填写食物名称'); return; }
   if(kcal<=0){ alert('请填写热量（选库中食物会自动算）'); return; }
-  const f = FOOD_DB.find(x=>x[0]===name);
+  const f = allFoods().find(x=>x[0]===name);
   const qty = parseFloat($('#fQty').value)||1;
   const cusName = $('#fCusName').value.trim(), cusVal = $('#fCusVal').value.trim();
   const entry = {
@@ -483,8 +496,10 @@ $('#foodAdd').onclick=()=>{
     custom: (cusName && cusVal) ? `${cusName} ${cusVal}` : ''
   };
   const fd = store.food; (fd.logs[foodDate]=fd.logs[foodDate]||[]).push(entry); store.food=fd;
+  const toLib = $('#fToLib').checked && saveFoodToLib(name, entry.unit, kcal/qty, entry.p/qty);
   $('#fName').value=''; $('#fKcal').value=''; $('#fP').value=''; $('#fQty').value=1;
   $('#fCusName').value=''; $('#fCusVal').value=''; foodAutoCalc();
+  if(toLib) $('#fProtein').textContent = '已加入我的食物库 ✓ 以后可直接选用';
   changed(); renderFood();
 };
 
@@ -555,21 +570,35 @@ function compressImage(file){
   });
 }
 /* Kimi 模型自动适配：部分账户没有 kimi-k3 权限会 404，按候选列表自动降级 */
-const KIMI_MODEL_LS='train2026_kimi_model';
+const KIMI_MODEL_V_LS='train2026_kimi_model_v', KIMI_MODEL_T_LS='train2026_kimi_model_t';
 const KIMI_VISION_MODELS=['kimi-k3','kimi-k2.5','moonshot-v1-128k-vision-preview','moonshot-v1-32k-vision-preview','moonshot-v1-8k-vision-preview'];
-const KIMI_TEXT_MODELS=['kimi-k3','kimi-k2.6','kimi-k2.5','moonshot-v1-32k','moonshot-v1-8k'];
+// 文本模型快者优先：思考型模型生成周报耗时长，手机锁屏/切后台易中断请求（Load failed）
+const KIMI_TEXT_MODELS=['kimi-k2.5','moonshot-v1-32k','moonshot-v1-8k','kimi-k3','kimi-k2.6'];
+// 网络层失败（Load failed 等）自动重试，间隔递增
+async function kimiPost(body){
+  let err;
+  for(let t=0;t<3;t++){
+    try{
+      return await fetch('https://api.moonshot.cn/v1/chat/completions',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+localStorage.getItem(KIMI_LS)},
+        body:JSON.stringify(body)
+      });
+    }catch(e){ err=e; await new Promise(r=>setTimeout(r, 800*(t+1))); }
+  }
+  throw err;
+}
 async function kimiChat(payload, needVision){
   const key=localStorage.getItem(KIMI_LS);
   const prefs=needVision?KIMI_VISION_MODELS:KIMI_TEXT_MODELS;
-  const saved=localStorage.getItem(KIMI_MODEL_LS);
+  const modelLs=needVision?KIMI_MODEL_V_LS:KIMI_MODEL_T_LS;
+  const saved=localStorage.getItem(modelLs)||localStorage.getItem('train2026_kimi_model');
   const models=(saved?[saved]:[]).concat(prefs).filter((v,i,a)=>a.indexOf(v)===i);
-  let lastStatus=0;
+  let lastStatus=0, lastNetErr=null;
   for(const m of models){
-    const res=await fetch('https://api.moonshot.cn/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify(Object.assign({},payload,{model:m}))
-    });
+    let res;
+    try{ res=await kimiPost(Object.assign({},payload,{model:m})); }
+    catch(e){ lastNetErr=e; continue; } // 网络中断（Load failed）→ 换模型再试
     if(res.status===404){ lastStatus=404; continue; } // 模型不存在或无权限 → 试下一个
     if(res.status===401) throw new Error('API Key 无效或余额不足');
     if(res.status===429) throw new Error('请求太频繁，稍后再试');
@@ -578,9 +607,10 @@ async function kimiChat(payload, needVision){
       if(res.status===400 && needVision){ lastStatus=400; continue; } // 文本模型收到图片 → 试下一个
       throw new Error('请求失败（HTTP '+res.status+'）'+(em?('：'+em):''));
     }
-    localStorage.setItem(KIMI_MODEL_LS,m); // 记住可用模型
+    localStorage.setItem(modelLs,m); // 记住可用模型
     return await res.json();
   }
+  if(lastNetErr && !lastStatus) throw new Error('网络连接中断（Load failed）：请求耗时较长时，手机锁屏或切后台会自动断开连接。请保持屏幕常亮、停留在本页面再试；仍失败请切换 Wi-Fi/流量后重试');
   // 全部失败：拉取账户可用模型帮助诊断
   let avail='';
   try{
@@ -639,9 +669,10 @@ function renderSnapResult(dataUrl, result){
           <input type="number" class="snap-p" data-i="${i}" value="${Math.round((x.p||0)*10)/10}" step="0.5" style="width:56px;border:1px solid var(--line);border-radius:8px;padding:6px;font-size:13px;text-align:right"><span style="font-size:11.5px;color:var(--sub)">g蛋白</span>
         </div>
       </div>`).join('')}
-    <div style="display:flex;gap:10px;margin-top:10px">
+    <div style="display:flex;gap:10px;margin-top:10px;align-items:center;flex-wrap:wrap">
       <button class="btn" id="snapAddAll">✓ 加入今日记录</button>
       <button class="btn ghost small" id="snapCancel">取消</button>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--sub);cursor:pointer"><input type="checkbox" id="snapToLib" checked style="width:16px;height:16px;accent-color:var(--green)">同时把勾选食物加入我的食物库</label>
     </div>`;
   $('#snapCancel').onclick=()=>{ $('#snapResult').innerHTML=''; };
   $('#snapAddAll').onclick=()=>{
@@ -654,13 +685,11 @@ function renderSnapResult(dataUrl, result){
       const val = sel=>{ const el=document.querySelector(`${sel}[data-i="${i}"]`); return el?el.value:''; };
       const name=val('.snap-name').trim()||x.name;
       const kcal=parseFloat(val('.snap-kcal'))||x.kcal;
-      arr.push({
-        meal, name,
-        qty: parseFloat(val('.snap-qty'))||x.qty||1,
-        unit: val('.snap-unit').trim()||x.unit||'份',
-        kcal,
-        p: parseFloat(val('.snap-p'))||0
-      });
+      const qty=parseFloat(val('.snap-qty'))||x.qty||1;
+      const unit=val('.snap-unit').trim()||x.unit||'份';
+      const p=parseFloat(val('.snap-p'))||0;
+      arr.push({ meal, name, qty, unit, kcal, p });
+      if($('#snapToLib').checked) saveFoodToLib(name, unit, kcal/qty, p/qty);
       n++;
     });
     store.food=fd; changed(); renderFood();
