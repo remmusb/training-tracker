@@ -30,9 +30,19 @@ function openMovePicker(srcId){
 }
 
 /* ================= 自助添加动作 ================= */
-// 动作库：由 7 天计划中按名称去重得到，自带组次/重量/要点/示范参数
+// 动作库：7 天计划去重 + 我的自定义动作库，自带组次/重量/要点/示范参数
+const EX_LIB_KEY='train2026_exlib_v1';
+function exLibCustom(){ try{return JSON.parse(localStorage.getItem(EX_LIB_KEY))||[]}catch(e){return[]} }
 const EX_LIB = [];
 PLAN.forEach(d=>d.ex.forEach(e=>{ if(!EX_LIB.some(x=>x.n===e.n)) EX_LIB.push(e); }));
+exLibCustom().forEach(e=>{ if(!EX_LIB.some(x=>x.n===e.n)) EX_LIB.push(e); });
+function saveExToLib(ex){
+  if(!ex || !ex.n || EX_LIB.some(x=>x.n===ex.n)) return false;
+  const lib=exLibCustom(); lib.push(ex); localStorage.setItem(EX_LIB_KEY, JSON.stringify(lib));
+  EX_LIB.push(ex);
+  document.getElementById('exLibList').innerHTML = EX_LIB.map(e=>`<option value="${e.n}">`).join('');
+  return true;
+}
 
 const axSheet = document.createElement('div');
 axSheet.id = 'axSheet';
@@ -58,7 +68,8 @@ axSheet.innerHTML = `
       <div style="grid-column:1/-1"><label style="font-size:12px;color:var(--sub);display:block;margin-bottom:4px">提示（可空）</label>
         <input type="text" id="axTip" placeholder="如：左手先做" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:14px"></div>
     </div>
-    <button class="btn" id="axSave" style="width:100%;margin-top:14px">添加到当天计划</button>
+    <label style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:12.5px;color:var(--sub);cursor:pointer"><input type="checkbox" id="axToLib" checked style="width:16px;height:16px;accent-color:var(--green)">同时加入我的动作库，以后添加时可直接选用</label>
+    <button class="btn" id="axSave" style="width:100%;margin-top:12px">添加到当天计划</button>
     <button class="btn ghost" id="axCancel" style="width:100%;margin-top:8px">取消</button>
   </div>`;
 document.body.appendChild(axSheet);
@@ -97,6 +108,7 @@ document.getElementById('axSave').onclick = ()=>{
     tip: document.getElementById('axTip').value.trim(),
     demo: f ? f.demo : (n + ' 教学')
   };
+  if(document.getElementById('axToLib').checked) saveExToLib(ex);
   const pa = store.planAdd; (pa[axDay]=pa[axDay]||[]).push(ex); store.planAdd = pa;
   axSheet.style.display = 'none';
   changed(); renderTrain();
