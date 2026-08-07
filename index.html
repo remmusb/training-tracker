@@ -247,8 +247,9 @@
         <div><label>自定义营养素（名称，如 膳食纤维/钙）</label><input type="text" id="fCusName" placeholder="可留空"></div>
         <div><label>自定义营养素含量（如 8g / 300mg）</label><input type="text" id="fCusVal" placeholder="可留空"></div>
       </div>
-      <div style="padding:0 14px 14px;display:flex;align-items:center;gap:12px">
+      <div style="padding:0 14px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <button class="btn" id="foodAdd">添加</button>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--sub);cursor:pointer"><input type="checkbox" id="fToLib" style="width:16px;height:16px;accent-color:var(--green)">同时加入我的食物库</label>
         <span id="fProtein" style="font-size:12.5px;color:var(--sub)"></span>
       </div>
     </div>
@@ -440,13 +441,13 @@ create policy "anon_all" on training_data
     </div>
   </section>
 
-  <footer>数据默认保存在本浏览器 · 在「体测报告 → 云同步」配置后多设备互通 · v20260803</footer>
+  <footer>数据默认保存在本浏览器 · 在「体测报告 → 云同步」配置后多设备互通 · v20260807</footer>
 </div>
 
-<script src="data.js?v=20260803"></script>
+<script src="data.js?v=20260807"></script>
 
-<script src="app.js?v=20260803"></script>
+<script src="app.js?v=20260807"></script>
 
-<script src="features.js?v=20260803"></script>
+<script src="features.js?v=20260807"></script>
 </body>
 </html>
