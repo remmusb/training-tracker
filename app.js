@@ -571,20 +571,25 @@ function compressImage(file){
 }
 /* Kimi 模型自动适配：部分账户没有 kimi-k3 权限会 404，按候选列表自动降级 */
 const KIMI_MODEL_V_LS='train2026_kimi_model_v', KIMI_MODEL_T_LS='train2026_kimi_model_t';
-const KIMI_VISION_MODELS=['kimi-k3','kimi-k2.5','moonshot-v1-128k-vision-preview','moonshot-v1-32k-vision-preview','moonshot-v1-8k-vision-preview'];
+// 视觉模型快者优先：思考型模型读图慢，手机锁屏/切后台易中断请求（Load failed）
+const KIMI_VISION_MODELS=['kimi-k2.5','moonshot-v1-128k-vision-preview','moonshot-v1-32k-vision-preview','kimi-k3','moonshot-v1-8k-vision-preview'];
 // 文本模型快者优先：思考型模型生成周报耗时长，手机锁屏/切后台易中断请求（Load failed）
 const KIMI_TEXT_MODELS=['kimi-k2.5','moonshot-v1-32k','moonshot-v1-8k','kimi-k3','kimi-k2.6'];
-// 网络层失败（Load failed 等）自动重试，间隔递增
+// 网络层失败（Load failed 等）自动重试，间隔递增；单次请求 90 秒超时，避免无限挂起
 async function kimiPost(body){
   let err;
   for(let t=0;t<3;t++){
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(), 90000);
     try{
       return await fetch('https://api.moonshot.cn/v1/chat/completions',{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+localStorage.getItem(KIMI_LS)},
-        body:JSON.stringify(body)
+        body:JSON.stringify(body),
+        signal:ctrl.signal
       });
-    }catch(e){ err=e; await new Promise(r=>setTimeout(r, 800*(t+1))); }
+    }catch(e){ err=(e&&e.name==='AbortError')?new Error('请求超时（90秒）'):e; await new Promise(r=>setTimeout(r, 800*(t+1))); }
+    finally{ clearTimeout(timer); }
   }
   throw err;
 }
@@ -632,11 +637,20 @@ async function kimiRecognize(dataUrl){
   const txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
   return parseJsonLoose(txt);
 }
-// 从模型输出中宽松提取 JSON（兼容思考模型夹杂说明文字的情况）
+// 从模型输出中宽松提取 JSON（兼容 markdown 围栏、思考模型夹杂说明文字、多个 JSON 块的情况）
 function parseJsonLoose(txt){
+  txt=String(txt||'').replace(/```(?:json)?/gi,'');
   try{ return JSON.parse(txt); }catch(e){}
-  const a=txt.indexOf('{'), b=txt.lastIndexOf('}');
-  if(a>=0 && b>a){ try{ return JSON.parse(txt.slice(a,b+1)); }catch(e){} }
+  // 按括号平衡扫描所有顶层 {...} 块，取最后一个能解析的（思考模型常在推理中先出现无关 JSON）
+  const blocks=[]; let depth=0, start=-1, inStr=false, esc=false;
+  for(let i=0;i<txt.length;i++){
+    const c=txt[i];
+    if(inStr){ if(esc) esc=false; else if(c==='\\') esc=true; else if(c==='"') inStr=false; continue; }
+    if(c==='"'){ inStr=true; continue; }
+    if(c==='{'){ if(depth===0) start=i; depth++; }
+    else if(c==='}'){ depth--; if(depth===0 && start>=0){ blocks.push(txt.slice(start,i+1)); start=-1; } }
+  }
+  for(let i=blocks.length-1;i>=0;i--){ try{ return JSON.parse(blocks[i]); }catch(e){} }
   throw new Error('返回格式异常，请重试');
 }
 function renderSnapResult(dataUrl, result){
