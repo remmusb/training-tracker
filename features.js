@@ -207,24 +207,29 @@ document.addEventListener('click', e=>{
 
 /* ================= 运动记录 ================= */
 let actDate = fmt(new Date());
-let rnImgData = null;   // 跑步截图（1张）
-let fbImgsData = [];    // 足球图（最多3张）
+let rnImgData = null;   // 跑步截图（1张，存储用）
+let rnImgAI = null;     // 跑步截图（AI 读图用，高分辨率）
+let fbImgsData = [];    // 足球图（最多3张，存储用）
+let fbImgsAI = [];      // 足球图（AI 读图用，高分辨率）
 
-function compressForStorage(file){
+function compressImg(file, max, quality){
   return new Promise((res,rej)=>{
     const img=new Image(); const url=URL.createObjectURL(file);
     img.onload=()=>{
-      let w=img.width, h=img.height; const max=900;
+      let w=img.width, h=img.height;
       if(w>max||h>max){ const r=Math.min(max/w,max/h); w=Math.round(w*r); h=Math.round(h*r); }
       const c=document.createElement('canvas'); c.width=w; c.height=h;
       c.getContext('2d').drawImage(img,0,0,w,h);
       URL.revokeObjectURL(url);
-      res(c.toDataURL('image/jpeg',0.72));
+      res(c.toDataURL('image/jpeg',quality));
     };
     img.onerror=()=>rej(new Error('图片读取失败'));
     img.src=url;
   });
 }
+// 存储用小图省空间；AI 读图用大图，截图里的小数字（配速/心率/距离）才看得清
+function compressForStorage(file){ return compressImg(file, 900, 0.72); }
+function compressForAI(file){ return compressImg(file, 1600, 0.85); }
 
 function renderAct(){
   const d = new Date(actDate+'T12:00:00');
@@ -264,22 +269,25 @@ $('#rnImg').addEventListener('change', async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
   $('#rnStatus').textContent='处理图片…';
   rnImgData = await compressForStorage(f);
+  rnImgAI = await compressForAI(f);
   $('#rnPreview').innerHTML=`<img src="${rnImgData}" style="width:84px;border-radius:10px">`;
   $('#rnStatus').textContent='已添加截图';
 });
 $('#fbImgBtn').onclick=()=>$('#fbImgs').click();
-$('#fbImgs').addEventListener('change', async e=>{
-  const files=[...e.target.files].slice(0,3); e.target.value=''; if(!files.length) return;
-  $('#fbStatus').textContent='处理图片…';
-  for(const f of files){ fbImgsData.push(await compressForStorage(f)); }
-  fbImgsData = fbImgsData.slice(0,3);
+function renderFbPreview(){
   $('#fbPreview').innerHTML = fbImgsData.map((s,i)=>`<span style="position:relative;display:inline-block"><img src="${s}" style="width:84px;border-radius:10px"><span data-fbrm="${i}" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border-radius:50%;width:20px;height:20px;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</span></span>`).join(' ');
+}
+$('#fbImgs').addEventListener('change', async e=>{
+  const files=[...e.target.files].slice(0,3-fbImgsData.length); e.target.value=''; if(!files.length) return;
+  $('#fbStatus').textContent='处理图片…';
+  for(const f of files){ fbImgsData.push(await compressForStorage(f)); fbImgsAI.push(await compressForAI(f)); }
+  renderFbPreview();
   $('#fbStatus').textContent=`已添加 ${fbImgsData.length} 张`;
 });
 $('#fbPreview').addEventListener('click', e=>{
   const rm = e.target.closest('[data-fbrm]'); if(!rm) return;
-  fbImgsData.splice(+rm.dataset.fbrm,1);
-  $('#fbPreview').innerHTML = fbImgsData.map((s,i)=>`<span style="position:relative;display:inline-block"><img src="${s}" style="width:84px;border-radius:10px"><span data-fbrm="${i}" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border-radius:50%;width:20px;height:20px;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer">×</span></span>`).join(' ');
+  fbImgsData.splice(+rm.dataset.fbrm,1); fbImgsAI.splice(+rm.dataset.fbrm,1);
+  renderFbPreview();
   $('#fbStatus').textContent = fbImgsData.length?`已添加 ${fbImgsData.length} 张`:'';
 });
 
@@ -289,41 +297,45 @@ async function kimiVision(prompt, dataUrls){
   const imgs=[].concat(dataUrls); // 支持单张或多张
   const content=[{type:'text',text:prompt}].concat(imgs.map(u=>({type:'image_url',image_url:{url:u}})));
   const j = await kimiChat({
+    temperature:0, // 提取任务不需要随机发挥，减少读数漂移
     messages:[
-      {role:'system', content:'你是运动数据提取助手，从App截图中提取数字。只输出JSON，找不到的字段填null。'},
+      {role:'system', content:'你是运动数据提取助手，从App截图中逐字读取数字。只输出JSON，找不到的字段填null，不要编造。'},
       {role:'user', content:content}
     ]
   }, true);
   const txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
   return parseJsonLoose(txt);
 }
+// 把提取结果填入表单，返回实际填入的字段数（null/空串不覆盖已有内容）
+function fillFields(j, pairs){
+  let n=0;
+  for(const [key, sel] of pairs){
+    const v=j[key];
+    if(v!=null && v!==''){ $(sel).value=v; n++; }
+  }
+  return n;
+}
 $('#rnAi').onclick=async ()=>{
-  if(!rnImgData){ alert('先上传记录截图'); return; }
-  $('#rnStatus').textContent='AI 读图中…';
+  if(!rnImgAI){ alert('先上传记录截图'); return; }
+  $('#rnStatus').textContent='AI 读图中…（约5-15秒，请保持亮屏）';
   try{
-    const j = await kimiVision('这是跑步App的记录截图。提取：{"dist":距离km数字,"dur":时长分钟数字（如1:24:48填85）,"pace":"平均配速如5\'30\\"","hr":平均心率数字,"kcal":消耗kcal数字}', rnImgData);
-    if(j.dist!=null) $('#rnDist').value=j.dist;
-    if(j.dur!=null) $('#rnDur').value=j.dur;
-    if(j.pace) $('#rnPace').value=j.pace;
-    if(j.hr!=null) $('#rnHr').value=j.hr;
-    if(j.kcal!=null) $('#rnKcal').value=j.kcal;
-    $('#rnStatus').textContent='已填入，可直接修改后保存';
+    const j = await kimiVision('这是跑步App的记录截图。请仔细读取图中的数字，提取：{"dist":距离km数字,"dur":时长分钟数字（如1:24:48填85）,"pace":"平均配速如5\'30\\"","hr":平均心率数字,"kcal":消耗kcal数字}', rnImgAI);
+    const n = fillFields(j, [['dist','#rnDist'],['dur','#rnDur'],['pace','#rnPace'],['hr','#rnHr'],['kcal','#rnKcal']]);
+    $('#rnStatus').textContent = n ? `已填入 ${n} 项，可直接修改后保存` : '没读到有效数字，换张更清晰的截图试试';
   }catch(err){ $('#rnStatus').textContent='⚠️ '+err.message; }
 };
 $('#fbAi').onclick=async ()=>{
-  if(!fbImgsData.length){ alert('先上传记录图'); return; }
-  $('#fbStatus').textContent='AI 读图中…';
+  if(!fbImgsAI.length){ alert('先上传记录图'); return; }
   try{
-    const j = await kimiVision('这是足球运动数据App（Possiball神仙球）的记录截图，共'+fbImgsData.length+'张，数据分散在不同页面：「跑动分析」页有本场总用时、几人制、本场距离(m)、高强度距离(m)、冲刺次数、最大瞬时速度(m/s)；「战术评价」页有五维评分。请跨所有图片提取：{"dur":本场总用时的分钟数（1:24:48填85，0:56:37填57）,"format":"几人制如11人制","pos":"位置，找不到填null","dist":本场距离换算成km（7261m填7.3）,"hi":高强度距离m数字,"sprint":冲刺次数,"max":最大瞬时速度m/s数字,"score":五维评分数字}', fbImgsData);
-    if(j.dur!=null) $('#fbDur').value=j.dur;
-    if(j.format) $('#fbFormat').value=j.format;
-    if(j.pos) $('#fbPos').value=j.pos;
-    if(j.dist!=null) $('#fbDist').value=j.dist;
-    if(j.hi!=null) $('#fbHi').value=j.hi;
-    if(j.sprint!=null) $('#fbSprint').value=j.sprint;
-    if(j.max!=null) $('#fbMax').value=j.max;
-    if(j.score!=null) $('#fbScore').value=j.score;
-    $('#fbStatus').textContent='已填入，可直接修改后保存';
+    // 逐张识别再合并：多张图塞一次请求失败率高，分开读每张只提取本页字段，准得多
+    const merged={};
+    for(let i=0;i<fbImgsAI.length;i++){
+      $('#fbStatus').textContent=`AI 读第 ${i+1}/${fbImgsAI.length} 张…（请保持亮屏）`;
+      const j = await kimiVision('这是足球运动数据App（Possiball神仙球）的记录截图，是其中一页。「跑动分析」页有本场总用时、几人制、本场距离(m)、高强度距离(m)、冲刺次数、最大瞬时速度(m/s)；「战术评价」页有五维评分。只提取这一张图里实际看得到的字段：{"dur":本场总用时的分钟数（1:24:48填85，0:56:37填57）,"format":"几人制如11人制","pos":"位置，找不到填null","dist":本场距离换算成km（7261m填7.3）,"hi":高强度距离m数字,"sprint":冲刺次数,"max":最大瞬时速度m/s数字,"score":五维评分数字}', fbImgsAI[i]);
+      for(const k in j){ if(j[k]!=null && j[k]!=='' && merged[k]==null) merged[k]=j[k]; }
+    }
+    const n = fillFields(merged, [['dur','#fbDur'],['format','#fbFormat'],['pos','#fbPos'],['dist','#fbDist'],['hi','#fbHi'],['sprint','#fbSprint'],['max','#fbMax'],['score','#fbScore']]);
+    $('#fbStatus').textContent = n ? `已填入 ${n} 项，可直接修改后保存` : '没读到有效数字，换更清晰的截图试试';
   }catch(err){ $('#fbStatus').textContent='⚠️ '+err.message; }
 };
 
@@ -334,7 +346,7 @@ $('#rnSave').onclick=()=>{
   const all=store.act; (all[actDate]=all[actDate]||[]).push({ type:'run', data, imgs:rnImgData?[rnImgData]:[], note:$('#rnNote').value.trim(), ts:Date.now() });
   store.act=all; changed();
   ['rnDist','rnDur','rnPace','rnHr','rnKcal','rnNote'].forEach(id=>$('#'+id).value='');
-  rnImgData=null; $('#rnPreview').innerHTML=''; $('#rnStatus').textContent='已保存 ✓';
+  rnImgData=null; rnImgAI=null; $('#rnPreview').innerHTML=''; $('#rnStatus').textContent='已保存 ✓';
   renderAct();
 };
 $('#fbSave').onclick=()=>{
@@ -343,7 +355,7 @@ $('#fbSave').onclick=()=>{
   const all=store.act; (all[actDate]=all[actDate]||[]).push({ type:'football', data, imgs:fbImgsData, note:$('#fbNote').value.trim(), ts:Date.now() });
   store.act=all; changed();
   ['fbDur','fbFormat','fbPos','fbDist','fbHi','fbSprint','fbMax','fbScore','fbGoal','fbAssist','fbNote'].forEach(id=>$('#'+id).value='');
-  fbImgsData=[]; $('#fbPreview').innerHTML=''; $('#fbStatus').textContent='已保存 ✓';
+  fbImgsData=[]; fbImgsAI=[]; $('#fbPreview').innerHTML=''; $('#fbStatus').textContent='已保存 ✓';
   renderAct();
 };
 
