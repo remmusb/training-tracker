@@ -1,1 +1,739 @@
-PLACEHOLDER_APP
+/* ================= 工具 ================= */
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2,'0');
+const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+function mondayOf(d){ const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x; }
+function bilibili(kw){ return 'https://search.bilibili.com/all?keyword=' + encodeURIComponent(kw); }
+
+/* ================= 状态 ================= */
+let weekOffset = 0; // 0=本周
+const CHECK_KEY='train2026_checks_v1', BODY_KEY='train2026_body_v1', FOOD_KEY='train2026_food_v1';
+const MOVES_KEY='train2026_moves_v1', ACT_KEY='train2026_act_v1', SUMM_KEY='train2026_summ_v1';
+const PLAN_DEL_KEY='train2026_plandel_v1';
+const PLAN_ADD_KEY='train2026_planadd_v1';
+const store = {
+  get checks(){ try{return JSON.parse(localStorage.getItem(CHECK_KEY))||{}}catch(e){return{}} },
+  set checks(v){ localStorage.setItem(CHECK_KEY, JSON.stringify(v)); },
+  get body(){ try{return JSON.parse(localStorage.getItem(BODY_KEY))||null}catch(e){return null} },
+  set body(v){ localStorage.setItem(BODY_KEY, JSON.stringify(v)); },
+  get food(){ try{return JSON.parse(localStorage.getItem(FOOD_KEY))||{logs:{},targets:{}}}catch(e){return{logs:{},targets:{}}} },
+  set food(v){ localStorage.setItem(FOOD_KEY, JSON.stringify(v)); },
+  get moves(){ try{return JSON.parse(localStorage.getItem(MOVES_KEY))||{}}catch(e){return{}} },
+  set moves(v){ localStorage.setItem(MOVES_KEY, JSON.stringify(v)); },
+  get act(){ try{return JSON.parse(localStorage.getItem(ACT_KEY))||{}}catch(e){return{}} },
+  set act(v){ localStorage.setItem(ACT_KEY, JSON.stringify(v)); },
+  get summ(){ try{return JSON.parse(localStorage.getItem(SUMM_KEY))||{}}catch(e){return{}} },
+  set summ(v){ localStorage.setItem(SUMM_KEY, JSON.stringify(v)); },
+  get planDel(){ try{return JSON.parse(localStorage.getItem(PLAN_DEL_KEY))||{}}catch(e){return{}} },
+  set planDel(v){ localStorage.setItem(PLAN_DEL_KEY, JSON.stringify(v)); },
+  get planAdd(){ try{return JSON.parse(localStorage.getItem(PLAN_ADD_KEY))||{}}catch(e){return{}} },
+  set planAdd(v){ localStorage.setItem(PLAN_ADD_KEY, JSON.stringify(v)); }
+};
+// 首次写入体测基准记录
+if(!store.body){
+  store.body = [{date:'2026-07-24', weight:63.2, fat:16.5, muscle:30.0, bmr:1813, note:'体测报告基准'}];
+}
+
+function currentMonday(){ const m=mondayOf(new Date()); m.setDate(m.getDate()+weekOffset*7); return m; }
+
+/* ================= 训练页渲染 ================= */
+function renderTrain(){
+  const mon = currentMonday();
+  const sun = new Date(mon); sun.setDate(sun.getDate()+6);
+  const isCur = weekOffset===0;
+  $('#weekLabel').textContent = `${mon.getMonth()+1}月${mon.getDate()}日 – ${sun.getMonth()+1}月${sun.getDate()}日` + (isCur?'（本周）':'');
+  const weekKey = fmt(mon);
+  const kp = keyPrefix(); // 方案前缀：常规计划无前缀（兼容历史打卡），其余方案带前缀互不干扰
+  const curPid = activePlanId();
+  const curPlan = PLANS[curPid] || PLANS.rehab;
+  const checks = store.checks[weekKey] || {};
+  const moves = store.moves[weekKey] || {};
+  const srcOf = {}; // 目标日 -> 源计划
+  Object.keys(moves).forEach(s=>{ srcOf[moves[s]] = s; });
+  const todayDow = ['mon','tue','wed','thu','fri','sat','sun'][(new Date().getDay()+6)%7];
+
+  let total=0, done=0;
+  const html = PLAN.map(day=>{
+    // 本日计划已迁出且没有迁入 → 占位卡
+    if(moves[day.id] && !srcOf[day.id]){
+      const tgt = PLAN.find(p=>p.id===moves[day.id]);
+      return `<div class="card day-card"><div class="day-head">
+        <div class="l">
+          <div class="dow">${day.dow}</div>
+          <div class="day-title" style="color:var(--sub)">${day.title}</div>
+          <div class="day-meta"><span>⇄ 已迁移到 ${tgt?tgt.dow:''}</span></div>
+        </div>
+        <button class="btn ghost small" data-unmove="${day.id}" style="align-self:center">撤销迁移</button>
+      </div></div>`;
+    }
+    const srcDay = srcOf[day.id] ? PLAN.find(p=>p.id===srcOf[day.id]) : day;
+    const moved = srcDay.id !== day.id;
+    const paused = !!srcDay.paused;
+    const exRow = (e, key)=>{
+      if(store.planDel[key]) return ''; // 已从计划中删除的项目
+      total++;
+      const on = !!checks[key]; if(on) done++;
+      const meta = [`<b>${e.sr}</b>`];
+      if(e.w) meta.push(e.w);
+      if(e.rest) meta.push('休 '+e.rest);
+      return `<div class="ex ${e.tag} ${on?'checked':''}" data-key="${key}">
+        <div class="chk"><svg viewBox="0 0 24 24"><polyline points="4 13 10 19 20 6"/></svg></div>
+        <div class="ex-info">
+          <div class="ex-name">${e.n}</div>
+          <div class="ex-meta">${meta.join('<span>·</span>')}</div>
+          ${e.tip?`<div class="ex-tip">💡 ${e.tip}</div>`:''}
+          <div class="ex-acts"><span class="ex-act" data-pts="${key}">📖 要点</span><span class="ex-act danger" data-delx="${key}">删除此项</span></div>
+        </div>
+        <span class="tag ${e.tag}">${e.tag==='warm'?'热身':e.tag==='main'?'训练':'恢复'}</span>
+        <a class="demo" href="${bilibili(e.demo)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">示范</a>
+      </div>`;
+    };
+    const adds = store.planAdd[kp+srcDay.id] || [];
+    const exHtml = srcDay.ex.map((e,i)=>exRow(e, `${kp}${srcDay.id}_${i}`)).join('')
+      + adds.map((e,j)=>exRow(e, `${kp}${srcDay.id}_a${j}`)).join('');
+    const dayDone = srcDay.ex.filter((e,i)=>checks[`${kp}${srcDay.id}_${i}`]).length + adds.filter((e,j)=>checks[`${kp}${srcDay.id}_a${j}`]).length;
+    const dayTotal = srcDay.ex.length + adds.length;
+    return `<div class="card day-card ${isCur&&day.id===todayDow?'open':''} ${paused?'paused':''}" data-day="${day.id}">
+      <div class="day-head">
+        <div class="l">
+          <div class="dow">${day.dow}${isCur&&day.id===todayDow?'<span class="today-badge">今天</span>':''}${paused?'<span class="pause-badge">⏸ 暂停 · 肩部恢复中</span>':''}${moved?`<span class="today-badge" style="background:var(--blue)">自${srcDay.dow}迁来</span>`:''}</div>
+          <div class="day-title">${srcDay.title}</div>
+          <div class="day-meta"><span>🕗 ${srcDay.time}</span><span>🎒 ${srcDay.equip}</span><span>🍚 ${srcDay.diet}</span>${paused?'<span style="color:var(--amber)">力量暂停，不计入缺勤</span>':''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;align-self:center">
+          <span class="day-count ${dayDone===dayTotal?'done':''}">${dayDone}/${dayTotal}</span>
+          ${!moved&&!paused?`<button class="btn ghost small mv-btn" data-mv="${day.id}">⇄ 迁移</button>`:''}
+        </div>
+      </div>
+      <div class="day-body">${exHtml}
+        <span class="diet-link" data-diet="${srcDay.dietId}">查看今日饮食安排 →</span>
+        <span class="addex-link" data-addex="${srcDay.id}">＋ 添加动作</span>
+      </div>
+    </div>`;
+  }).join('');
+  const delCount = Object.keys(store.planDel).length;
+  const restoreHtml = delCount ? `<div style="text-align:center;padding:2px 0 14px"><span class="ex-act" data-restoreplan="1">↩︎ 已隐藏 ${delCount} 个动作，点这里恢复全部</span></div>` : '';
+  // 方案切换栏（可随时切回常规计划，选择会保存并云同步）
+  const planBarHtml = `<div class="card plan-bar">
+    <span class="plan-bar-label">当前方案</span>
+    ${Object.values(PLANS).map(p=>`<button class="plan-btn ${p.key===curPid?'on':''}" data-plan="${p.key}">${p.name}</button>`).join('')}
+    <span class="plan-bar-sub">${curPlan.sub||''}${curPid!=='regular'?' · 肩部恢复后点「常规计划」即可切回':''}</span>
+  </div>`;
+  // 教练备注 / 公告（仅当前方案配置了才显示）
+  const annHtml = curPlan.announce ? `<div class="card announce">📣 <b>教练备注</b>：${curPlan.announce}${curPlan.runGoal?`<br>🎯 ${curPlan.runGoal}`:''}</div>` : '';
+  const summCard = (typeof weekReportCardHtml==='function') ? weekReportCardHtml(weekKey) : '';
+  $('#tab-train').innerHTML = planBarHtml + annHtml + html + restoreHtml + summCard;
+  const pct = total? Math.round(done/total*100):0;
+  $('#pFill').style.width = pct+'%';
+  $('#pText').textContent = `本周完成 ${done}/${total} 项 · ${pct}%`;
+}
+
+// 事件委托：打卡 + 折叠 + 方案切换
+$('#tab-train').addEventListener('click', e=>{
+  if(e.target.closest('[data-pts],[data-delx],[data-restoreplan],[data-addex]')) return; // 由 features.js 捕获阶段处理
+  const planBtn = e.target.closest('[data-plan]');
+  if(planBtn){
+    if(planBtn.dataset.plan!==activePlanId()){
+      applyPlan(planBtn.dataset.plan);
+      changed();
+      renderTrain();
+    }
+    return;
+  }
+  const exRow = e.target.closest('.ex');
+  if(exRow && !e.target.closest('.demo')){
+    const key = exRow.dataset.key;
+    const weekKey = fmt(currentMonday());
+    const all = store.checks; const wk = all[weekKey]||{};
+    wk[key] = !wk[key]; if(!wk[key]) delete wk[key];
+    all[weekKey]=wk; store.checks=all;
+    changed();
+    renderTrain();
+    return;
+  }
+  const head = e.target.closest('.day-head');
+  if(head){ head.closest('.day-card').classList.toggle('open'); return; }
+  const link = e.target.closest('.diet-link');
+  if(link){ switchTab('diet'); const id=link.dataset.diet;
+    document.querySelectorAll('#dietList .card').forEach(c=>c.classList.toggle('open', c.dataset.diet===id));
+    setTimeout(()=>{ const t=document.querySelector(`#dietList .card[data-diet="${id}"]`); t&&t.scrollIntoView({behavior:'smooth',block:'start'}); },60);
+  }
+});
+
+/* ================= 周导航 ================= */
+$('#prevWeek').onclick=()=>{weekOffset--;renderTrain();};
+$('#nextWeek').onclick=()=>{weekOffset++;renderTrain();};
+$('#curWeek').onclick=()=>{weekOffset=0;renderTrain();};
+
+/* ================= 饮食页 ================= */
+function renderDiet(){
+  $('#dietList').innerHTML = DIETS.map(d=>`
+    <div class="card" data-diet="${d.id}">
+      <div class="diet-head"><div><span class="t">${d.name}</span></div>
+        <div style="display:flex;align-items:center"><span class="kcal">${d.kcal}</span><span class="arrow" style="margin-left:8px">▼</span></div></div>
+      <div class="diet-body"><div class="tbl-scroll"><table>
+        <thead><tr><th>时间</th><th>食物</th><th>份量</th><th>热量</th><th>备注</th></tr></thead>
+        <tbody>${d.meals.map(m=>`<tr><td class="k">${m[0]}</td><td>${m[1]}</td><td class="k">${m[2]}</td><td class="k">${m[3]}</td><td class="k">${m[4]}</td></tr>`).join('')}
+        <tr><td class="k"><b>合计</b></td><td colspan="4" style="color:var(--sub)">${d.total}</td></tr></tbody>
+      </table></div></div>
+    </div>`).join('');
+}
+$('#dietList').addEventListener('click', e=>{
+  const h=e.target.closest('.diet-head'); if(h) h.closest('.card').classList.toggle('open');
+});
+
+/* ================= 体测页 ================= */
+$('#bcDate').value = fmt(new Date());
+$('#bcSave').onclick = ()=>{
+  const rec = {
+    date: $('#bcDate').value || fmt(new Date()),
+    weight: parseFloat($('#bcWeight').value)||null,
+    fat: parseFloat($('#bcFat').value)||null,
+    muscle: parseFloat($('#bcMuscle').value)||null,
+    bmr: parseFloat($('#bcBmr').value)||null,
+    note: $('#bcNote').value.trim()
+  };
+  if(!rec.weight && !rec.fat && !rec.muscle){ alert('至少填写一项数据'); return; }
+  const arr = store.body; arr.push(rec); arr.sort((a,b)=>a.date<b.date?-1:1); store.body = arr;
+  ['bcWeight','bcFat','bcMuscle','bcBmr','bcNote'].forEach(id=>$('#'+id).value='');
+  changed();
+  renderBody();
+};
+function renderBody(){
+  const arr = store.body;
+  // 表格（新→旧）
+  $('#bcTable tbody').innerHTML = [...arr].reverse().map((r,i)=>`
+    <tr><td class="k">${r.date}</td><td>${r.weight??'—'}</td><td>${r.fat??'—'}</td><td>${r.muscle??'—'}</td><td>${r.bmr??'—'}</td>
+    <td class="k">${r.note||''}</td><td><span class="del" data-i="${arr.length-1-i}">删除</span></td></tr>`).join('');
+  drawTrend(arr);
+}
+$('#bcTable').addEventListener('click', e=>{
+  const d=e.target.closest('.del'); if(!d) return;
+  if(!confirm('删除这条记录？')) return;
+  const arr=store.body; arr.splice(+d.dataset.i,1); store.body=arr; changed(); renderBody();
+});
+$('#exportBtn').onclick=()=>{
+  const data = { 打卡: store.checks, 体测: store.body, 饮食: store.food, 迁移: store.moves, 运动记录: store.act, 周报: store.summ, 隐藏动作: store.planDel, 自选动作: store.planAdd, 方案: activePlanId(), 导出时间: new Date().toLocaleString('zh-CN') };
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `训练数据_${fmt(new Date())}.json`; a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+/* 趋势图（原生 canvas） */
+function drawTrend(arr){
+  const cv = $('#trendCanvas');
+  const dpr = window.devicePixelRatio||1;
+  const W = cv.clientWidth, H = 220;
+  cv.width = W*dpr; cv.height = H*dpr;
+  const ctx = cv.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
+  const series = [
+    {k:'weight', c:'#2563eb', label:'体重'},
+    {k:'fat',    c:'#16a34a', label:'体脂率'},
+    {k:'muscle', c:'#d97706', label:'骨骼肌'}
+  ];
+  const pts = arr.map(r=>({date:r.date, vals:series.map(s=>r[s.k])}));
+  if(pts.length<1){ ctx.fillStyle='#94a3b8'; ctx.font='13px sans-serif'; ctx.fillText('暂无数据',20,30); return; }
+  const padL=14, padR=14, padT=16, padB=30;
+  const iw = W-padL-padR, ih = H-padT-padB;
+  const x = i => pts.length===1 ? padL+iw/2 : padL + iw*i/(pts.length-1);
+  // 网格
+  ctx.strokeStyle='#e2e8f0'; ctx.lineWidth=1;
+  for(let g=0; g<=3; g++){ const y=padT+ih*g/3; ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke(); }
+  series.forEach((s,si)=>{
+    const vs = pts.map(p=>p.vals[si]).filter(v=>v!=null);
+    if(!vs.length) return;
+    let min=Math.min(...vs), max=Math.max(...vs);
+    if(min===max){min-=1;max+=1;} const m=(max-min)*0.15; min-=m; max+=m;
+    const y = v => padT + ih*(1-(v-min)/(max-min));
+    ctx.strokeStyle=s.c; ctx.lineWidth=2; ctx.beginPath();
+    let started=false;
+    pts.forEach((p,i)=>{ const v=p.vals[si]; if(v==null) return;
+      if(!started){ctx.moveTo(x(i),y(v));started=true;} else ctx.lineTo(x(i),y(v)); });
+    ctx.stroke();
+    pts.forEach((p,i)=>{ const v=p.vals[si]; if(v==null) return;
+      ctx.fillStyle=s.c; ctx.beginPath(); ctx.arc(x(i),y(v),3,0,Math.PI*2); ctx.fill();
+      ctx.font='10px sans-serif'; ctx.textAlign='center';
+      ctx.fillText(v, x(i), y(v)-7);
+    });
+  });
+  // 日期标签
+  ctx.fillStyle='#94a3b8'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+  pts.forEach((p,i)=>{
+    if(pts.length>6 && i%Math.ceil(pts.length/6)!==0 && i!==pts.length-1) return;
+    ctx.fillText(p.date.slice(5), x(i), H-10);
+  });
+}
+window.addEventListener('resize', ()=>{ if(!$('#tab-body').classList.contains('hidden')) renderBody(); });
+
+/* ================= Tab 切换 ================= */
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
+  ['train','diet','food','act','body','rules'].forEach(n=>$('#tab-'+n).classList.toggle('hidden', n!==name));
+  if(name==='body') renderBody();
+  if(name==='food') renderFood();
+  if(name==='act' && typeof renderAct==='function') renderAct();
+  window.scrollTo({top:0});
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchTab(t.dataset.tab));
+
+/* ================= 云同步（Supabase REST） ================= */
+const META_KEY='train2026_meta_v1', SYNC_KEY='train2026_sync_cfg';
+const meta = {
+  get(){ try{return JSON.parse(localStorage.getItem(META_KEY))||{updated:null}}catch(e){return{updated:null}} },
+  set(v){ localStorage.setItem(META_KEY, JSON.stringify(v)); }
+};
+const syncCfg = {
+  get(){ try{return JSON.parse(localStorage.getItem(SYNC_KEY))}catch(e){return null} },
+  set(v){ v?localStorage.setItem(SYNC_KEY,JSON.stringify(v)):localStorage.removeItem(SYNC_KEY); }
+};
+function setSyncStatus(txt, color){ const el=$('#syncPill'); el.textContent=txt; el.style.color=color||'#94a3b8'; }
+// URL 归一化：去掉末尾斜杠和 /rest/v1 后缀（Supabase 新界面复制的地址自带该后缀）
+function sbBase(u){ return (u||'').trim().replace(/\/+$/,'').replace(/\/rest\/v1$/i,''); }
+
+function changed(){
+  meta.set({updated:new Date().toISOString()});
+  schedulePush();
+}
+let pushTimer=null;
+function schedulePush(){
+  if(!syncCfg.get()) return;
+  clearTimeout(pushTimer);
+  pushTimer=setTimeout(pushNow, 800);
+}
+async function pushNow(){
+  const cfg=syncCfg.get(); if(!cfg) return;
+  setSyncStatus('☁️ 同步中…');
+  try{
+    const res = await fetch(sbBase(cfg.url)+'/rest/v1/training_data', {
+      method:'POST',
+      headers:{ 'apikey':cfg.key, 'Authorization':'Bearer '+cfg.key,
+        'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates' },
+      body: JSON.stringify({ id:'main', data:{ checks:store.checks, body:store.body, food:store.food, moves:store.moves, act:store.act, summ:store.summ, planDel:store.planDel, planAdd:store.planAdd, plan:activePlanId(), updated:meta.get().updated } })
+    });
+    if(!res.ok) throw new Error(res.status);
+    setSyncStatus('☁️ 已同步 '+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}), '#4ade80');
+  }catch(e){ setSyncStatus('⚠️ 同步失败，数据已存本地，联网后自动重试', '#fbbf24'); }
+}
+async function pullNow(showAlerts){
+  const cfg=syncCfg.get(); if(!cfg) return false;
+  setSyncStatus('☁️ 同步中…');
+  try{
+    const res = await fetch(sbBase(cfg.url)+'/rest/v1/training_data?id=eq.main&select=data', {
+      headers:{ 'apikey':cfg.key, 'Authorization':'Bearer '+cfg.key }
+    });
+    if(!res.ok) throw new Error(res.status);
+    const rows = await res.json();
+    const remote = rows && rows[0] && rows[0].data;
+    if(remote){
+      const ru = remote.updated || '', lu = meta.get().updated || '';
+      if(ru > lu){ // 云端更新 → 覆盖本地
+        localStorage.setItem(CHECK_KEY, JSON.stringify(remote.checks||{}));
+        localStorage.setItem(BODY_KEY, JSON.stringify(remote.body||[]));
+        if(remote.food) localStorage.setItem(FOOD_KEY, JSON.stringify(remote.food));
+        if(remote.moves) localStorage.setItem(MOVES_KEY, JSON.stringify(remote.moves));
+        if(remote.act) localStorage.setItem(ACT_KEY, JSON.stringify(remote.act));
+        if(remote.summ) localStorage.setItem(SUMM_KEY, JSON.stringify(remote.summ));
+        if(remote.planDel) localStorage.setItem(PLAN_DEL_KEY, JSON.stringify(remote.planDel));
+        if(remote.planAdd) localStorage.setItem(PLAN_ADD_KEY, JSON.stringify(remote.planAdd));
+        if(remote.plan) applyPlan(remote.plan); // 方案选择也跟随云同步
+        meta.set({updated:ru});
+        renderTrain(); renderBody();
+        if(!$('#tab-food').classList.contains('hidden')) renderFood();
+      } else if(lu > ru){ // 本地更新 → 推上去
+        await pushNow(); return true;
+      }
+      setSyncStatus('☁️ 已同步 '+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}), '#4ade80');
+    } else {
+      await pushNow(); // 云端还没有数据 → 把本地推上去
+    }
+    return true;
+  }catch(e){
+    setSyncStatus('⚠️ 同步失败，当前使用本地数据', '#fbbf24');
+    if(showAlerts) alert('同步失败，请检查 URL 和 key 是否正确，以及网络能否访问 Supabase。');
+    return false;
+  }
+}
+// 同步配置界面
+$('#sbSave').onclick = async ()=>{
+  const url=sbBase($('#sbUrl').value), key=$('#sbKey').value.trim();
+  if(!url || !key){ alert('请填写完整的 URL 和 key'); return; }
+  if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url)){ alert('URL 格式应为 https://xxxx.supabase.co'); return; }
+  $('#sbUrl').value=url;
+  syncCfg.set({url, key});
+  await pullNow(true);
+};
+$('#sbClear').onclick = ()=>{
+  if(!confirm('断开后本设备数据保留，但不再与云端同步。继续？')) return;
+  syncCfg.set(null); setSyncStatus('未开启云同步'); $('#sbUrl').value=''; $('#sbKey').value='';
+};
+window.addEventListener('online', ()=>pullNow(false));
+
+/* ================= 导入 ================= */
+$('#importBtn').onclick=()=>$('#importFile').click();
+$('#importFile').addEventListener('change', e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const d=JSON.parse(rd.result);
+      if(!d.打卡 && !d.体测 && !d.饮食 && !d.运动记录) throw new Error('格式不对');
+      if(d.打卡) localStorage.setItem(CHECK_KEY, JSON.stringify(d.打卡));
+      if(d.体测) localStorage.setItem(BODY_KEY, JSON.stringify(d.体测));
+      if(d.饮食) localStorage.setItem(FOOD_KEY, JSON.stringify(d.饮食));
+      if(d.迁移) localStorage.setItem(MOVES_KEY, JSON.stringify(d.迁移));
+      if(d.运动记录) localStorage.setItem(ACT_KEY, JSON.stringify(d.运动记录));
+      if(d.周报) localStorage.setItem(SUMM_KEY, JSON.stringify(d.周报));
+      if(d.隐藏动作) localStorage.setItem(PLAN_DEL_KEY, JSON.stringify(d.隐藏动作));
+      if(d.自选动作) localStorage.setItem(PLAN_ADD_KEY, JSON.stringify(d.自选动作));
+      if(d.方案) applyPlan(d.方案);
+      changed(); renderTrain(); renderBody();
+      alert('导入成功');
+    }catch(err){ alert('导入失败：文件格式不正确'); }
+    e.target.value='';
+  };
+  rd.readAsText(f);
+});
+
+/* ================= 饮食记录 ================= */
+const MEAL_ORDER = ['跑前餐','早餐','跑步补给','上午加餐','午餐','下午加餐','练前餐','练后餐','晚餐','足球补给','睡前','其他'];
+// 每天对应的饮食类型由当前方案（PLANS）的 dowInfo 决定，在 data.js 中随方案切换
+let foodDate = fmt(new Date());
+
+function guessMeal(t){
+  if(/跑前/.test(t)) return '跑前餐';
+  if(/跑后|跑中/.test(t)) return '跑步补给';
+  if(/早餐/.test(t)) return '早餐';
+  if(/午餐/.test(t)) return '午餐';
+  if(/练前/.test(t)) return '练前餐';
+  if(/练后/.test(t)) return '练后餐';
+  if(/晚餐/.test(t)) return '晚餐';
+  if(/睡前/.test(t)) return '睡前';
+  if(/足球/.test(t)) return '足球补给';
+  if(/加餐/.test(t)) return '下午加餐';
+  return '其他';
+}
+
+function renderFood(){
+  const d = new Date(foodDate+'T12:00:00');
+  const dow = (d.getDay()+6)%7;
+  const info = DOW_INFO[dow];
+  const fd = store.food;
+  const entries = fd.logs[foodDate] || [];
+  const target = fd.targets[foodDate] ?? info.target;
+
+  $('#foodDow').textContent = ['周一','周二','周三','周四','周五','周六','周日'][dow] + ' · ' + info.name;
+  $('#foodDateLabel').textContent = `${d.getMonth()+1}月${d.getDate()}日`;
+  $('#foodTargetHint').textContent = `计划类型：${info.name} · 默认目标 ${info.target} kcal`;
+  $('#foodTarget').value = target;
+
+  const totK = entries.reduce((s,e)=>s+(+e.kcal||0),0);
+  const totP = entries.reduce((s,e)=>s+(+e.p||0),0);
+  const pct = target? Math.min(100, Math.round(totK/target*100)) : 0;
+  const fill = $('#foodFill');
+  fill.style.width = pct+'%';
+  fill.style.background = totK<=target ? 'linear-gradient(90deg,#4ade80,#22c55e)' : (totK<=target*1.1 ? '#f59e0b' : '#ef4444');
+  $('#foodSummary').innerHTML = `已摄入 <b style="color:var(--ink)">${Math.round(totK)}</b> / ${target} kcal（${pct}%） · 蛋白质约 <b style="color:var(--ink)">${Math.round(totP)}</b> g · 还差 <b style="color:var(--ink)">${Math.max(0,Math.round(target-totK))}</b> kcal`;
+
+  // 明细：按餐次分组
+  const groups = {};
+  entries.forEach((e,i)=>{ (groups[e.meal]=groups[e.meal]||[]).push({...e,i}); });
+  const order = [...MEAL_ORDER, ...Object.keys(groups).filter(k=>!MEAL_ORDER.includes(k))];
+  const html = order.filter(m=>groups[m]).map(m=>{
+    const sub = groups[m].reduce((s,e)=>s+(+e.kcal||0),0);
+    return `<div style="padding:8px 14px 2px;font-size:12.5px;font-weight:700;color:var(--sub)">${m} · ${Math.round(sub)} kcal</div>` +
+      groups[m].map(e=>`<div class="ex" style="cursor:default">
+        <div class="ex-info">
+          <div class="ex-name">${e.name}</div>
+          <div class="ex-meta"><b>${e.qty} × ${e.unit||'份'}</b><span>·</span>${Math.round(e.kcal)} kcal${e.p?`<span>·</span>蛋白质 ${Math.round(e.p*10)/10} g`:''}${e.custom?`<span>·</span>${e.custom}`:''}</div>
+        </div>
+        <span class="del" data-fi="${e.i}">删除</span>
+      </div>`).join('');
+  }).join('');
+  $('#foodList').innerHTML = html || '<div class="note" style="padding-top:10px">还没有记录，点上方「添加」或「按模板预填」。</div>';
+}
+
+// 日期导航
+$('#foodPrev').onclick=()=>{ const d=new Date(foodDate+'T12:00:00'); d.setDate(d.getDate()-1); foodDate=fmt(d); renderFood(); };
+$('#foodNext').onclick=()=>{ const d=new Date(foodDate+'T12:00:00'); d.setDate(d.getDate()+1); foodDate=fmt(d); renderFood(); };
+$('#foodToday').onclick=()=>{ foodDate=fmt(new Date()); renderFood(); };
+
+// 目标修改
+$('#foodTarget').addEventListener('change', ()=>{
+  const v = parseInt($('#foodTarget').value); if(!v) return;
+  const fd = store.food; fd.targets[foodDate]=v; store.food=fd; changed(); renderFood();
+});
+
+// 食物库联动（内置 FOOD_DB + 我的自定义食物库）
+const FOOD_LIB_KEY='train2026_foodlib_v1';
+function foodLibCustom(){ try{return JSON.parse(localStorage.getItem(FOOD_LIB_KEY))||[]}catch(e){return[]} }
+function allFoods(){ return FOOD_DB.concat(foodLibCustom()); }
+function refreshFoodNames(){ $('#foodNames').innerHTML = allFoods().map(f=>`<option value="${f[0]}">`).join(''); }
+function saveFoodToLib(name, unit, kcal, p){
+  if(!name) return false;
+  if(FOOD_DB.some(f=>f[0]===name) || foodLibCustom().some(f=>f[0]===name)) return false;
+  const lib=foodLibCustom();
+  lib.push([name, unit||'份', Math.round((+kcal||0)*10)/10, Math.round((+p||0)*10)/10]);
+  localStorage.setItem(FOOD_LIB_KEY, JSON.stringify(lib));
+  refreshFoodNames();
+  return true;
+}
+refreshFoodNames();
+function foodAutoCalc(){
+  const f = allFoods().find(x=>x[0]===$('#fName').value.trim());
+  const qty = parseFloat($('#fQty').value)||1;
+  if(f){
+    $('#fUnit').textContent = '× ' + f[1];
+    $('#fKcal').value = Math.round(f[2]*qty);
+    $('#fP').value = Math.round(f[3]*qty*10)/10;
+    $('#fProtein').textContent = '已按食物库估算，均可修改';
+  } else {
+    $('#fUnit').textContent = ''; $('#fProtein').textContent = '';
+  }
+}
+$('#fName').addEventListener('input', foodAutoCalc);
+$('#fQty').addEventListener('input', foodAutoCalc);
+
+// 添加
+$('#foodAdd').onclick=()=>{
+  const name = $('#fName').value.trim();
+  const kcal = parseFloat($('#fKcal').value)||0;
+  if(!name){ alert('请填写食物名称'); return; }
+  if(kcal<=0){ alert('请填写热量（选库中食物会自动算）'); return; }
+  const f = allFoods().find(x=>x[0]===name);
+  const qty = parseFloat($('#fQty').value)||1;
+  const cusName = $('#fCusName').value.trim(), cusVal = $('#fCusVal').value.trim();
+  const entry = {
+    meal: $('#fMeal').value, name, qty,
+    unit: f? f[1] : '份',
+    kcal,
+    p: parseFloat($('#fP').value) || (f? Math.round(f[3]*qty*10)/10 : 0),
+    custom: (cusName && cusVal) ? `${cusName} ${cusVal}` : ''
+  };
+  const fd = store.food; (fd.logs[foodDate]=fd.logs[foodDate]||[]).push(entry); store.food=fd;
+  const toLib = $('#fToLib').checked && saveFoodToLib(name, entry.unit, kcal/qty, entry.p/qty);
+  $('#fName').value=''; $('#fKcal').value=''; $('#fP').value=''; $('#fQty').value=1;
+  $('#fCusName').value=''; $('#fCusVal').value=''; foodAutoCalc();
+  if(toLib) $('#fProtein').textContent = '已加入我的食物库 ✓ 以后可直接选用';
+  changed(); renderFood();
+};
+
+// 删除
+$('#foodList').addEventListener('click', e=>{
+  const d = e.target.closest('.del'); if(!d) return;
+  const fd = store.food; const arr = fd.logs[foodDate]||[];
+  arr.splice(+d.dataset.fi,1); fd.logs[foodDate]=arr; store.food=fd;
+  changed(); renderFood();
+});
+
+// 按模板预填
+$('#prefillBtn').onclick=()=>{
+  const d = new Date(foodDate+'T12:00:00');
+  const info = DOW_INFO[(d.getDay()+6)%7];
+  const tpl = DIETS.find(x=>x.id===info.dietId);
+  if(!tpl) return;
+  const fd = store.food; const arr = fd.logs[foodDate]=fd.logs[foodDate]||[];
+  tpl.meals.forEach(m=>{
+    const k = parseInt(m[3])||0;
+    arr.push({ meal: guessMeal(m[0]), name: m[1], qty:1, unit:m[2]||'份', kcal:k, p:0 });
+  });
+  store.food=fd; changed(); renderFood();
+  alert(`已按「${tpl.name}」模板预填 ${tpl.meals.length} 条，可逐条删改`);
+};
+
+/* ================= 拍照识别（Kimi 视觉模型） ================= */
+const KIMI_LS='train2026_kimi_key';
+$('#kimiKey').value = localStorage.getItem(KIMI_LS)||'';
+$('#kimiKeySave').onclick=()=>{
+  const k=$('#kimiKey').value.trim();
+  if(!k.startsWith('sk-')){ alert('key 一般以 sk- 开头，请检查'); return; }
+  localStorage.setItem(KIMI_LS,k); $('#kimiCfg').open=false;
+  $('#snapStatus').textContent='Key 已保存';
+};
+$('#snapBtn').onclick=()=>{
+  if(!localStorage.getItem(KIMI_LS)){ $('#kimiCfg').open=true; alert('请先配置 Moonshot API Key（点开下方灰色区域）'); return; }
+  $('#snapFile').click();
+};
+$('#snapFile').addEventListener('change', async e=>{
+  const f=e.target.files[0]; e.target.value='';
+  if(!f) return;
+  $('#snapResult').innerHTML='';
+  $('#snapStatus').textContent='压缩图片…';
+  try{
+    const dataUrl = await compressImage(f);
+    $('#snapStatus').textContent='Kimi 识别中（约5-10秒）…';
+    const result = await kimiRecognize(dataUrl);
+    $('#snapStatus').textContent='';
+    renderSnapResult(dataUrl, result);
+  }catch(err){
+    $('#snapStatus').textContent='⚠️ '+err.message;
+  }
+});
+function compressImage(file){
+  return new Promise((res,rej)=>{
+    const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      let w=img.width, h=img.height; const max=1280;
+      if(w>max||h>max){ const r=Math.min(max/w,max/h); w=Math.round(w*r); h=Math.round(h*r); }
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg',0.85));
+    };
+    img.onerror=()=>rej(new Error('图片读取失败'));
+    img.src=url;
+  });
+}
+/* Kimi 模型自动适配：部分账户没有 kimi-k3 权限会 404，按候选列表自动降级 */
+const KIMI_MODEL_V_LS='train2026_kimi_model_v', KIMI_MODEL_T_LS='train2026_kimi_model_t';
+// 视觉模型快者优先：思考型模型读图慢，手机锁屏/切后台易中断请求（Load failed）
+const KIMI_VISION_MODELS=['kimi-k2.5','moonshot-v1-128k-vision-preview','moonshot-v1-32k-vision-preview','kimi-k3','moonshot-v1-8k-vision-preview'];
+// 文本模型快者优先：思考型模型生成周报耗时长，手机锁屏/切后台易中断请求（Load failed）
+const KIMI_TEXT_MODELS=['kimi-k2.5','moonshot-v1-32k','moonshot-v1-8k','kimi-k3','kimi-k2.6'];
+// 网络层失败（Load failed 等）自动重试，间隔递增；单次请求 90 秒超时，避免无限挂起
+async function kimiPost(body){
+  let err;
+  for(let t=0;t<3;t++){
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(), 90000);
+    try{
+      return await fetch('https://api.moonshot.cn/v1/chat/completions',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+localStorage.getItem(KIMI_LS)},
+        body:JSON.stringify(body),
+        signal:ctrl.signal
+      });
+    }catch(e){ err=(e&&e.name==='AbortError')?new Error('请求超时（90秒）'):e; await new Promise(r=>setTimeout(r, 800*(t+1))); }
+    finally{ clearTimeout(timer); }
+  }
+  throw err;
+}
+async function kimiChat(payload, needVision){
+  const key=localStorage.getItem(KIMI_LS);
+  const prefs=needVision?KIMI_VISION_MODELS:KIMI_TEXT_MODELS;
+  const modelLs=needVision?KIMI_MODEL_V_LS:KIMI_MODEL_T_LS;
+  const saved=localStorage.getItem(modelLs)||localStorage.getItem('train2026_kimi_model');
+  const models=(saved?[saved]:[]).concat(prefs).filter((v,i,a)=>a.indexOf(v)===i);
+  let lastStatus=0, lastNetErr=null;
+  for(const m of models){
+    let res;
+    try{ res=await kimiPost(Object.assign({},payload,{model:m})); }
+    catch(e){ lastNetErr=e; continue; } // 网络中断（Load failed）→ 换模型再试
+    if(res.status===404){ lastStatus=404; continue; } // 模型不存在或无权限 → 试下一个
+    if(res.status===401) throw new Error('API Key 无效或余额不足');
+    if(res.status===429) throw new Error('请求太频繁，稍后再试');
+    if(!res.ok){
+      let em=''; try{ em=(await res.json()).error.message; }catch(e){}
+      if(res.status===400 && needVision){ lastStatus=400; continue; } // 文本模型收到图片 → 试下一个
+      throw new Error('请求失败（HTTP '+res.status+'）'+(em?('：'+em):''));
+    }
+    localStorage.setItem(modelLs,m); // 记住可用模型
+    return await res.json();
+  }
+  if(lastNetErr && !lastStatus) throw new Error('网络连接中断（Load failed）：请求耗时较长时，手机锁屏或切后台会自动断开连接。请保持屏幕常亮、停留在本页面再试；仍失败请切换 Wi-Fi/流量后重试');
+  // 全部失败：拉取账户可用模型帮助诊断
+  let avail='';
+  try{
+    const r=await fetch('https://api.moonshot.cn/v1/models',{headers:{'Authorization':'Bearer '+key}});
+    const j=await r.json(); avail=(j.data||[]).map(x=>x.id).join('、');
+  }catch(e){}
+  throw new Error('候选模型都不可用（最后 HTTP '+lastStatus+'）。你账户当前可用模型：'+(avail||'获取失败')+'。请把这条信息截图发给我');
+}
+async function kimiRecognize(dataUrl){
+  const j = await kimiChat({
+    messages:[
+      {role:'system', content:'你是食物营养识别助手。识别照片中的所有食物，估算每样的份量、热量和营养素。只输出JSON，不要输出其他内容，格式：{"items":[{"name":"食物名","qty":1,"unit":"份量描述如100g/1碗","kcal":数字,"p":蛋白质克数}],"note":"一句话整体说明"}。按中式餐饮常见分量估算，拿不准就保守估计。'},
+      {role:'user', content:[
+        {type:'text', text:'识别这顿饭的食物，估算热量和蛋白质'},
+        {type:'image_url', image_url:{url:dataUrl}}
+      ]}
+    ]
+  }, true);
+  const txt=(j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||'';
+  return parseJsonLoose(txt);
+}
+// 从模型输出中宽松提取 JSON（兼容 markdown 围栏、思考模型夹杂说明文字、多个 JSON 块的情况）
+function parseJsonLoose(txt){
+  txt=String(txt||'').replace(/```(?:json)?/gi,'');
+  try{ return JSON.parse(txt); }catch(e){}
+  // 按括号平衡扫描所有顶层 {...} 块，取最后一个能解析的（思考模型常在推理中先出现无关 JSON）
+  const blocks=[]; let depth=0, start=-1, inStr=false, esc=false;
+  for(let i=0;i<txt.length;i++){
+    const c=txt[i];
+    if(inStr){ if(esc) esc=false; else if(c==='\\') esc=true; else if(c==='"') inStr=false; continue; }
+    if(c==='"'){ inStr=true; continue; }
+    if(c==='{'){ if(depth===0) start=i; depth++; }
+    else if(c==='}'){ depth--; if(depth===0 && start>=0){ blocks.push(txt.slice(start,i+1)); start=-1; } }
+  }
+  for(let i=blocks.length-1;i>=0;i--){ try{ return JSON.parse(blocks[i]); }catch(e){} }
+  throw new Error('返回格式异常，请重试');
+}
+function renderSnapResult(dataUrl, result){
+  const items=(result.items||[]).filter(x=>x && x.name && (+x.kcal)>0);
+  if(!items.length){ $('#snapResult').innerHTML='<div class="note">没识别出食物，换张照片试试。</div>'; return; }
+  const total=items.reduce((s,x)=>s+(+x.kcal||0),0);
+  $('#snapResult').innerHTML=`
+    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:8px">
+      <img src="${dataUrl}" style="width:84px;height:84px;object-fit:cover;border-radius:10px;flex:none">
+      <div style="font-size:12.5px;color:var(--sub)">${result.note||''}<br>识别到 <b style="color:var(--ink)">${items.length}</b> 样食物，共约 <b style="color:var(--ink)">${Math.round(total)}</b> kcal，可删改后入库。</div>
+    </div>
+    <div style="margin-bottom:8px;font-size:13px">餐次：
+      <select id="snapMeal" style="border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13.5px">
+        ${['早餐','上午加餐','午餐','下午加餐','练前餐','练后餐','跑前餐','跑步补给','晚餐','睡前','其他'].map(m=>`<option>${m}</option>`).join('')}
+      </select>
+    </div>
+    <div class="note" style="padding:0 0 8px">所有字段都可直接修改，改完再入库：</div>
+    ${items.map((x,i)=>`
+      <div class="ex" style="cursor:default;flex-wrap:wrap;gap:8px">
+        <input type="checkbox" class="snap-chk" data-i="${i}" checked style="width:18px;height:18px;accent-color:var(--green);flex:none">
+        <div class="ex-info" style="min-width:150px">
+          <input type="text" class="snap-name" data-i="${i}" value="${x.name}" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13.5px;font-weight:650">
+          <div style="display:flex;gap:4px;align-items:center;margin-top:5px;font-size:12px;color:var(--sub)">
+            <input type="number" class="snap-qty" data-i="${i}" value="${x.qty||1}" step="0.5" style="width:56px;border:1px solid var(--line);border-radius:8px;padding:5px;font-size:12.5px"> ×
+            <input type="text" class="snap-unit" data-i="${i}" value="${x.unit||'份'}" style="width:80px;border:1px solid var(--line);border-radius:8px;padding:5px;font-size:12.5px">
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex:none">
+          <input type="number" class="snap-kcal" data-i="${i}" value="${Math.round(x.kcal)}" style="width:68px;border:1px solid var(--line);border-radius:8px;padding:6px;font-size:13px;text-align:right"><span style="font-size:11.5px;color:var(--sub)">kcal</span>
+          <input type="number" class="snap-p" data-i="${i}" value="${Math.round((x.p||0)*10)/10}" step="0.5" style="width:56px;border:1px solid var(--line);border-radius:8px;padding:6px;font-size:13px;text-align:right"><span style="font-size:11.5px;color:var(--sub)">g蛋白</span>
+        </div>
+      </div>`).join('')}
+    <div style="display:flex;gap:10px;margin-top:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn" id="snapAddAll">✓ 加入今日记录</button>
+      <button class="btn ghost small" id="snapCancel">取消</button>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--sub);cursor:pointer"><input type="checkbox" id="snapToLib" checked style="width:16px;height:16px;accent-color:var(--green)">同时把勾选食物加入我的食物库</label>
+    </div>`;
+  $('#snapCancel').onclick=()=>{ $('#snapResult').innerHTML=''; };
+  $('#snapAddAll').onclick=()=>{
+    const meal=$('#snapMeal').value;
+    const fd=store.food; const arr=fd.logs[foodDate]=fd.logs[foodDate]||[];
+    let n=0;
+    document.querySelectorAll('.snap-chk').forEach(chk=>{
+      if(!chk.checked) return;
+      const i=+chk.dataset.i; const x=items[i];
+      const val = sel=>{ const el=document.querySelector(`${sel}[data-i="${i}"]`); return el?el.value:''; };
+      const name=val('.snap-name').trim()||x.name;
+      const kcal=parseFloat(val('.snap-kcal'))||x.kcal;
+      const qty=parseFloat(val('.snap-qty'))||x.qty||1;
+      const unit=val('.snap-unit').trim()||x.unit||'份';
+      const p=parseFloat(val('.snap-p'))||0;
+      arr.push({ meal, name, qty, unit, kcal, p });
+      if($('#snapToLib').checked) saveFoodToLib(name, unit, kcal/qty, p/qty);
+      n++;
+    });
+    store.food=fd; changed(); renderFood();
+    $('#snapResult').innerHTML='';
+    $('#snapStatus').textContent=`已加入 ${n} 条记录 ✓`;
+  };
+}
+
+/* ================= 初始化 ================= */
+renderTrain();
+renderDiet();
+renderBody();
+renderFood();
+(function initSync(){
+  const cfg=syncCfg.get();
+  if(cfg){ $('#sbUrl').value=cfg.url; $('#sbKey').value=cfg.key; pullNow(false); }
+  else setSyncStatus('本地模式 · 未开启云同步');
+})();
