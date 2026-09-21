@@ -49,17 +49,6 @@
   .day-body{border-top:1px dashed var(--line);display:none}
   .day-card.open .day-body{display:block}
 
-  /* ---------- Plan switch / announce / paused ---------- */
-  .plan-bar{padding:10px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .plan-bar-label{font-size:12.5px;font-weight:700;color:var(--sub)}
-  .plan-btn{border:1px solid var(--line);background:#fff;color:var(--sub);border-radius:99px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer}
-  .plan-btn.on{background:var(--dark);color:#fff;border-color:var(--dark)}
-  .plan-btn:active{transform:scale(.96)}
-  .plan-bar-sub{font-size:11.5px;color:var(--sub);width:100%}
-  .announce{background:var(--amber-soft);border-color:#fde68a;padding:12px 14px;font-size:13.5px;line-height:1.7;color:#78350f}
-  .day-card.paused{background:#f8fafc}
-  .day-card.paused .day-title{color:var(--sub)}
-  .pause-badge{background:#94a3b8;color:#fff;border-radius:6px;padding:1px 7px;font-size:11px;margin-left:6px;vertical-align:1px}
 
   /* ---------- Exercise rows ---------- */
   .ex{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #f1f5f9}
@@ -152,7 +141,7 @@
   <div class="wrap">
     <div>
       <div class="h-title">训练计划打卡</div>
-      <div class="h-sub">晚间力量版 · 足球 + 跑步专项 · 2026年9月</div>
+      <div class="h-sub">一三五力量 · 二六跑步 · 周四机动 · 周日足球 · 2026年9月</div>
     </div>
     <div class="week-bar">
       <button class="wk-btn" id="prevWeek">‹ 上周</button>
@@ -424,53 +413,52 @@ create policy "anon_all" on training_data
 
   <section id="tab-rules" class="hidden">
     <div class="card info-card">
-      <h3>🏋️ 力量训练长期规则（肩伤恢复后执行）</h3>
+      <h3>📅 每周节奏（2026年9月起，肩部已痊愈）</h3>
       <ul>
-        <li><b>频率</b>：每周 2 次（周二上肢 / 周五下肢+核心），间隔 ≥72 小时</li>
-        <li><b>时长</b>：每次 ≤45 分钟（晚 8:00–8:45），练完距离睡觉 ≥2 小时</li>
-        <li><b>过头减量</b>：推举改轻重量高次数（3×12–15），引体向上先做离心慢下</li>
-        <li><b>肩袖预防</b>：每次力量课先做 5 分钟——弹力带外旋 2×15 + YTWL 一组</li>
-        <li><b>足球联动</b>：踢球当天及次日不安排上肢力量</li>
+        <li><b>周一 / 三 / 五 · 力量</b>：周一推（胸+肩+三头）、周三拉（背+二头+后肩）、周五下肢+核心，均晚间 8:00 开始</li>
+        <li><b>周二 / 六 · 跑步</b>：周二节奏跑（Zone 3），周六有氧慢跑（Zone 2，留力周日比赛）</li>
+        <li><b>周四 · 机动日</b>：状态好就轻松跑 30–40 分钟，疲劳就做泡沫轴 + 拉伸恢复</li>
+        <li><b>周日 · 足球</b>：固定比赛日，赛后补糖补水 + 拉伸</li>
+        <li><b>临时加场</b>：用「⇄ 迁移」把当天计划挪走；踢完球次日力量减量，只做主项</li>
       </ul>
     </div>
     <div class="card info-card">
-      <h3>⚽ 足球日调整方案（周中约每月 1–2 次，通常晚上）</h3>
+      <h3>🏋️ 力量训练要点</h3>
       <ul>
-        <li><b>替换跑步日（周三/六）</b>：当天不跑，晚上直接踢球；按足球日饮食</li>
-        <li><b>替换力量日（周二/五）</b>：当天力量取消，直接踢球；次日不安排上肢力量</li>
-        <li><b>周日固定比赛日</b>：周六 LSD 控制在 Zone 2，留力比赛</li>
-        <li><b>足球后第二天（周一机动日）</b>：不做上肢力量，只做散步/波速球恢复 + 泡沫轴；按恢复日饮食（2200–2300 kcal）</li>
+        <li><b>时长</b>：每次 ≤60 分钟，练完距离睡觉 ≥2 小时</li>
+        <li><b>顺序</b>：先热身激活，再主项，最后孤立动作和拉伸</li>
+        <li><b>渐进</b>：能连续两次完成上限次数就加重量</li>
+        <li><b>平衡</b>：单侧动作左手先做，推日别忘面拉平衡肩部</li>
       </ul>
     </div>
     <div class="card info-card">
       <h3>🎯 6 个月渐进目标</h3>
       <div class="goal-grid">
         <div class="goal"><div class="m">2 个月</div><div>哑铃卧推 10kg×8次<br>节奏跑 8km<br>单腿站立 45秒</div></div>
-        <div class="goal"><div class="m">4 个月</div><div>卧推 10kg×12次+弹力带<br>节奏跑 10km / LSD 15km<br>单腿硬拉+轻哑铃</div></div>
-        <div class="goal"><div class="m">6 个月</div><div>弓箭手俯卧撑 + 引体负重<br>配速提升，LSD 维持<br>闭眼单腿站立 60秒</div></div>
+        <div class="goal"><div class="m">4 个月</div><div>卧推 10kg×12次+弹力带<br>节奏跑 10km / 有氧跑 12km<br>单腿硬拉+轻哑铃</div></div>
+        <div class="goal"><div class="m">6 个月</div><div>弓箭手俯卧撑 + 引体负重<br>配速提升，有氧跑维持<br>闭眼单腿站立 60秒</div></div>
       </div>
     </div>
     <div class="card info-card">
       <h3>⚠️ 关键提醒</h3>
       <ul>
-        <li>力量训练晚 8:00–8:45（≤45分钟），练后餐（21:00）+ 睡前酪蛋白（22:00）</li>
+        <li>力量训练晚 8:00–9:00（≤60分钟），练后餐（21:00）+ 睡前酪蛋白（22:00）</li>
         <li>跑步放早上，早餐改为跑前餐（5:30 香蕉+白面包）</li>
-        <li><b>睡眠红线</b>：23:00 前上床，目标 ≥6.5 小时；不达标次日课程降一档</li>
         <li><b>血糖波动大</b>：练前避免能量胶/香蕉，优先燕麦/红薯/全麦</li>
         <li><b>细胞外液偏低</b>：训练日全天喝含钠电解质水</li>
         <li><b>右手肌肉量高</b>：所有单侧动作左手先做，日常多用左手</li>
-        <li>连续疲劳时：周五力量降档或取消，只做泡沫轴 + 拉伸</li>
+        <li>连续疲劳时：周四机动日直接改恢复，周六有氧跑减半</li>
       </ul>
     </div>
   </section>
 
-  <footer>数据默认保存在本浏览器 · 在「体测报告 → 云同步」配置后多设备互通 · v20260917</footer>
+  <footer>数据默认保存在本浏览器 · 在「体测报告 → 云同步」配置后多设备互通 · v20260921</footer>
 </div>
 
-<script src="data.js?v=20260917"></script>
+<script src="data.js?v=20260921"></script>
 
-<script src="app.js?v=20260916"></script>
+<script src="app.js?v=20260921"></script>
 
-<script src="features.js?v=20260916"></script>
+<script src="features.js?v=20260921"></script>
 </body>
 </html>
