@@ -29,22 +29,19 @@ function openMovePicker(srcId){
   mvSheet.style.display = 'flex';
 }
 
-/* ================= 打卡键解析（方案前缀兼容） ================= */
-// 常规计划键无前缀（mon_3），其余方案带前缀（rehab__mon_3），两套方案打卡互不干扰
+/* ================= 打卡键解析 ================= */
+// 打卡键格式：{dayId}_{序号}（如 mon_3），自选动作为 {dayId}_a{序号}（如 mon_a0）
 function parseExKey(key){
-  let pid='regular', k=key;
-  const pi=key.indexOf('__');
-  if(pi>0){ pid=key.slice(0,pi); k=key.slice(pi+2); }
-  const dayId=k.split('_')[0], idx=k.split('_')[1]||'';
-  return { pid, dayId, idx, addKey:(pid==='regular'?'':pid+'__')+dayId };
+  const dayId=key.split('_')[0], idx=key.split('_')[1]||'';
+  return { dayId, idx, addKey:dayId };
 }
 
 /* ================= 自助添加动作 ================= */
-// 动作库：所有方案的课表动作去重 + 我的自定义动作库，自带组次/重量/要点/示范参数
+// 动作库：课表动作去重 + 我的自定义动作库，自带组次/重量/要点/示范参数
 const EX_LIB_KEY='train2026_exlib_v1';
 function exLibCustom(){ try{return JSON.parse(localStorage.getItem(EX_LIB_KEY))||[]}catch(e){return[]} }
 const EX_LIB = [];
-Object.values(PLANS).forEach(p=>p.days.forEach(d=>d.ex.forEach(e=>{ if(!EX_LIB.some(x=>x.n===e.n)) EX_LIB.push(e); })));
+PLAN.forEach(d=>d.ex.forEach(e=>{ if(!EX_LIB.some(x=>x.n===e.n)) EX_LIB.push(e); }));
 exLibCustom().forEach(e=>{ if(!EX_LIB.some(x=>x.n===e.n)) EX_LIB.push(e); });
 function saveExToLib(ex){
   if(!ex || !ex.n || EX_LIB.some(x=>x.n===ex.n)) return false;
@@ -119,7 +116,7 @@ document.getElementById('axSave').onclick = ()=>{
     demo: f ? f.demo : (n + ' 教学')
   };
   if(document.getElementById('axToLib').checked) saveExToLib(ex);
-  const pa = store.planAdd; const k = keyPrefix()+axDay; (pa[k]=pa[k]||[]).push(ex); store.planAdd = pa;
+  const pa = store.planAdd; (pa[axDay]=pa[axDay]||[]).push(ex); store.planAdd = pa;
   axSheet.style.display = 'none';
   changed(); renderTrain();
 };
@@ -137,8 +134,7 @@ function findExByKey(key){
     const adds = store.planAdd[pk.addKey] || [];
     return adds[+pk.idx.slice(1)] || null;
   }
-  const days = (PLANS[pk.pid] || PLANS.regular).days;
-  const day = days.find(p=>p.id===pk.dayId);
+  const day = PLAN.find(p=>p.id===pk.dayId);
   return day ? day.ex[+pk.idx] : null;
 }
 function openPtsSheet(key){
@@ -381,15 +377,14 @@ function weekReportCardHtml(weekKey){
 }
 function collectWeekStats(weekKey){
   const mon = new Date(weekKey+'T12:00:00');
-  const kp = keyPrefix();
   const checks = store.checks[weekKey]||{};
   const moves = store.moves[weekKey]||{};
   const lines=[]; let tTotal=0,tDone=0;
   PLAN.forEach(day=>{
-    const dn=day.ex.length, dd=day.ex.filter((e,i)=>checks[`${kp}${day.id}_${i}`]).length;
+    const dn=day.ex.length, dd=day.ex.filter((e,i)=>checks[`${day.id}_${i}`]).length;
     tTotal+=dn; tDone+=dd;
     const mv = moves[day.id] ? `（迁至${DOW_LIST.find(x=>x[0]===moves[day.id])[1]}）` : '';
-    lines.push(`${day.dow}${day.title}${mv}${day.paused?'（暂停，不计缺勤）':''} ${dd}/${dn}`);
+    lines.push(`${day.dow}${day.title}${mv} ${dd}/${dn}`);
   });
   let kcalSum=0,pSum=0,days=0;
   const dayKcal=[];
@@ -419,7 +414,7 @@ function localSummary(st){
     if(st.avgP<90) tips.push(`蛋白质日均 ${st.avgP}g 偏低（增肌建议 100-120g），练后餐和睡前餐别省`);
     if(st.avgKcal>3000) tips.push('日均热量偏高，结合血糖情况注意精制碳水比例');
   } else tips.push('本周没有饮食记录，建议至少记录训练日饮食');
-  if(st.fbCount>0) tips.push('足球日后第二天不做上肢力量，只做恢复+泡沫轴');
+  if(st.fbCount>0) tips.push('周日踢球后，周一力量日留意下肢疲劳，状态差就把腿日动作减一组');
   if(st.runCount===0) tips.push('本周无跑步记录，跑步课对血糖和心肺很关键');
   return `本周训练完成 ${st.tDone}/${st.tTotal} 项（${st.pct}%），饮食记录 ${st.days} 天${st.days?`（日均 ${st.avgKcal} kcal、蛋白质 ${st.avgP}g）`:''}，跑步 ${st.runCount} 次 ${st.runDist.toFixed(1)}km，足球 ${st.fbCount} 场。\n建议：${tips.map((t,i)=>`${i+1}.${t}`).join('；')}。`;
 }
@@ -437,7 +432,7 @@ document.addEventListener('click', async e=>{
     let text=null, aiErr=null;
     if(localStorage.getItem(KIMI_LS)){
       try{
-        text = (await kimiText(`你是用户的健身教练兼营养师。用户38岁，有血糖偏高问题，目标增肌+提升足球/跑步表现，当前肩部受伤恢复中（力量训练减量、注重肩袖预防）。根据以下本周数据，输出200-300字中文总结：1）训练完成情况点评（点名完成差的日子，力量暂停日不算缺勤）2）饮食分析（热量、蛋白质是否达标，结合控糖）3）下周3条具体可执行的建议。语气直接具体，不空谈。\n\n${st.text}`)).trim();
+        text = (await kimiText(`你是用户的健身教练兼营养师。用户38岁，有血糖偏高问题，目标增肌+提升足球/跑步表现，每周节奏为一三五力量（推/拉/下肢）、二六跑步、周四机动、周日踢球。根据以下本周数据，输出200-300字中文总结：1）训练完成情况点评（点名完成差的日子）2）饮食分析（热量、蛋白质是否达标，结合控糖）3）下周3条具体可执行的建议。语气直接具体，不空谈。\n\n${st.text}`)).trim();
       }catch(err){ aiErr=err.message; }
     }
     if(!text){ // 无 Key 或 AI 失败 → 本地统计模板兜底
