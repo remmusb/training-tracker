@@ -43,9 +43,6 @@ function renderTrain(){
   const isCur = weekOffset===0;
   $('#weekLabel').textContent = `${mon.getMonth()+1}月${mon.getDate()}日 – ${sun.getMonth()+1}月${sun.getDate()}日` + (isCur?'（本周）':'');
   const weekKey = fmt(mon);
-  const kp = keyPrefix(); // 方案前缀：常规计划无前缀（兼容历史打卡），其余方案带前缀互不干扰
-  const curPid = activePlanId();
-  const curPlan = PLANS[curPid] || PLANS.rehab;
   const checks = store.checks[weekKey] || {};
   const moves = store.moves[weekKey] || {};
   const srcOf = {}; // 目标日 -> 源计划
@@ -68,7 +65,6 @@ function renderTrain(){
     }
     const srcDay = srcOf[day.id] ? PLAN.find(p=>p.id===srcOf[day.id]) : day;
     const moved = srcDay.id !== day.id;
-    const paused = !!srcDay.paused;
     const exRow = (e, key)=>{
       if(store.planDel[key]) return ''; // 已从计划中删除的项目
       total++;
@@ -88,21 +84,21 @@ function renderTrain(){
         <a class="demo" href="${bilibili(e.demo)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">示范</a>
       </div>`;
     };
-    const adds = store.planAdd[kp+srcDay.id] || [];
-    const exHtml = srcDay.ex.map((e,i)=>exRow(e, `${kp}${srcDay.id}_${i}`)).join('')
-      + adds.map((e,j)=>exRow(e, `${kp}${srcDay.id}_a${j}`)).join('');
-    const dayDone = srcDay.ex.filter((e,i)=>checks[`${kp}${srcDay.id}_${i}`]).length + adds.filter((e,j)=>checks[`${kp}${srcDay.id}_a${j}`]).length;
+    const adds = store.planAdd[srcDay.id] || [];
+    const exHtml = srcDay.ex.map((e,i)=>exRow(e, `${srcDay.id}_${i}`)).join('')
+      + adds.map((e,j)=>exRow(e, `${srcDay.id}_a${j}`)).join('');
+    const dayDone = srcDay.ex.filter((e,i)=>checks[`${srcDay.id}_${i}`]).length + adds.filter((e,j)=>checks[`${srcDay.id}_a${j}`]).length;
     const dayTotal = srcDay.ex.length + adds.length;
-    return `<div class="card day-card ${isCur&&day.id===todayDow?'open':''} ${paused?'paused':''}" data-day="${day.id}">
+    return `<div class="card day-card ${isCur&&day.id===todayDow?'open':''}" data-day="${day.id}">
       <div class="day-head">
         <div class="l">
-          <div class="dow">${day.dow}${isCur&&day.id===todayDow?'<span class="today-badge">今天</span>':''}${paused?'<span class="pause-badge">⏸ 暂停 · 肩部恢复中</span>':''}${moved?`<span class="today-badge" style="background:var(--blue)">自${srcDay.dow}迁来</span>`:''}</div>
+          <div class="dow">${day.dow}${isCur&&day.id===todayDow?'<span class="today-badge">今天</span>':''}${moved?`<span class="today-badge" style="background:var(--blue)">自${srcDay.dow}迁来</span>`:''}</div>
           <div class="day-title">${srcDay.title}</div>
-          <div class="day-meta"><span>🕗 ${srcDay.time}</span><span>🎒 ${srcDay.equip}</span><span>🍚 ${srcDay.diet}</span>${paused?'<span style="color:var(--amber)">力量暂停，不计入缺勤</span>':''}</div>
+          <div class="day-meta"><span>🕗 ${srcDay.time}</span><span>🎒 ${srcDay.equip}</span><span>🍚 ${srcDay.diet}</span></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;align-self:center">
           <span class="day-count ${dayDone===dayTotal?'done':''}">${dayDone}/${dayTotal}</span>
-          ${!moved&&!paused?`<button class="btn ghost small mv-btn" data-mv="${day.id}">⇄ 迁移</button>`:''}
+          ${!moved?`<button class="btn ghost small mv-btn" data-mv="${day.id}">⇄ 迁移</button>`:''}
         </div>
       </div>
       <div class="day-body">${exHtml}
@@ -113,33 +109,16 @@ function renderTrain(){
   }).join('');
   const delCount = Object.keys(store.planDel).length;
   const restoreHtml = delCount ? `<div style="text-align:center;padding:2px 0 14px"><span class="ex-act" data-restoreplan="1">↩︎ 已隐藏 ${delCount} 个动作，点这里恢复全部</span></div>` : '';
-  // 方案切换栏（可随时切回常规计划，选择会保存并云同步）
-  const planBarHtml = `<div class="card plan-bar">
-    <span class="plan-bar-label">当前方案</span>
-    ${Object.values(PLANS).map(p=>`<button class="plan-btn ${p.key===curPid?'on':''}" data-plan="${p.key}">${p.name}</button>`).join('')}
-    <span class="plan-bar-sub">${curPlan.sub||''}${curPid!=='regular'?' · 肩部恢复后点「常规计划」即可切回':''}</span>
-  </div>`;
-  // 教练备注 / 公告（仅当前方案配置了才显示）
-  const annHtml = curPlan.announce ? `<div class="card announce">📣 <b>教练备注</b>：${curPlan.announce}${curPlan.runGoal?`<br>🎯 ${curPlan.runGoal}`:''}</div>` : '';
   const summCard = (typeof weekReportCardHtml==='function') ? weekReportCardHtml(weekKey) : '';
-  $('#tab-train').innerHTML = planBarHtml + annHtml + html + restoreHtml + summCard;
+  $('#tab-train').innerHTML = html + restoreHtml + summCard;
   const pct = total? Math.round(done/total*100):0;
   $('#pFill').style.width = pct+'%';
   $('#pText').textContent = `本周完成 ${done}/${total} 项 · ${pct}%`;
 }
 
-// 事件委托：打卡 + 折叠 + 方案切换
+// 事件委托：打卡 + 折叠
 $('#tab-train').addEventListener('click', e=>{
   if(e.target.closest('[data-pts],[data-delx],[data-restoreplan],[data-addex]')) return; // 由 features.js 捕获阶段处理
-  const planBtn = e.target.closest('[data-plan]');
-  if(planBtn){
-    if(planBtn.dataset.plan!==activePlanId()){
-      applyPlan(planBtn.dataset.plan);
-      changed();
-      renderTrain();
-    }
-    return;
-  }
   const exRow = e.target.closest('.ex');
   if(exRow && !e.target.closest('.demo')){
     const key = exRow.dataset.key;
@@ -213,7 +192,7 @@ $('#bcTable').addEventListener('click', e=>{
   const arr=store.body; arr.splice(+d.dataset.i,1); store.body=arr; changed(); renderBody();
 });
 $('#exportBtn').onclick=()=>{
-  const data = { 打卡: store.checks, 体测: store.body, 饮食: store.food, 迁移: store.moves, 运动记录: store.act, 周报: store.summ, 隐藏动作: store.planDel, 自选动作: store.planAdd, 方案: activePlanId(), 导出时间: new Date().toLocaleString('zh-CN') };
+  const data = { 打卡: store.checks, 体测: store.body, 饮食: store.food, 迁移: store.moves, 运动记录: store.act, 周报: store.summ, 隐藏动作: store.planDel, 自选动作: store.planAdd, 导出时间: new Date().toLocaleString('zh-CN') };
   const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = `训练数据_${fmt(new Date())}.json`; a.click();
@@ -309,7 +288,7 @@ async function pushNow(){
       method:'POST',
       headers:{ 'apikey':cfg.key, 'Authorization':'Bearer '+cfg.key,
         'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates' },
-      body: JSON.stringify({ id:'main', data:{ checks:store.checks, body:store.body, food:store.food, moves:store.moves, act:store.act, summ:store.summ, planDel:store.planDel, planAdd:store.planAdd, plan:activePlanId(), updated:meta.get().updated } })
+      body: JSON.stringify({ id:'main', data:{ checks:store.checks, body:store.body, food:store.food, moves:store.moves, act:store.act, summ:store.summ, planDel:store.planDel, planAdd:store.planAdd, updated:meta.get().updated } })
     });
     if(!res.ok) throw new Error(res.status);
     setSyncStatus('☁️ 已同步 '+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}), '#4ade80');
@@ -336,7 +315,6 @@ async function pullNow(showAlerts){
         if(remote.summ) localStorage.setItem(SUMM_KEY, JSON.stringify(remote.summ));
         if(remote.planDel) localStorage.setItem(PLAN_DEL_KEY, JSON.stringify(remote.planDel));
         if(remote.planAdd) localStorage.setItem(PLAN_ADD_KEY, JSON.stringify(remote.planAdd));
-        if(remote.plan) applyPlan(remote.plan); // 方案选择也跟随云同步
         meta.set({updated:ru});
         renderTrain(); renderBody();
         if(!$('#tab-food').classList.contains('hidden')) renderFood();
@@ -386,7 +364,6 @@ $('#importFile').addEventListener('change', e=>{
       if(d.周报) localStorage.setItem(SUMM_KEY, JSON.stringify(d.周报));
       if(d.隐藏动作) localStorage.setItem(PLAN_DEL_KEY, JSON.stringify(d.隐藏动作));
       if(d.自选动作) localStorage.setItem(PLAN_ADD_KEY, JSON.stringify(d.自选动作));
-      if(d.方案) applyPlan(d.方案);
       changed(); renderTrain(); renderBody();
       alert('导入成功');
     }catch(err){ alert('导入失败：文件格式不正确'); }
@@ -397,7 +374,7 @@ $('#importFile').addEventListener('change', e=>{
 
 /* ================= 饮食记录 ================= */
 const MEAL_ORDER = ['跑前餐','早餐','跑步补给','上午加餐','午餐','下午加餐','练前餐','练后餐','晚餐','足球补给','睡前','其他'];
-// 每天对应的饮食类型由当前方案（PLANS）的 dowInfo 决定，在 data.js 中随方案切换
+// 每天对应的饮食类型由 data.js 中的 DOW_INFO 决定
 let foodDate = fmt(new Date());
 
 function guessMeal(t){
@@ -409,7 +386,7 @@ function guessMeal(t){
   if(/练后/.test(t)) return '练后餐';
   if(/晚餐/.test(t)) return '晚餐';
   if(/睡前/.test(t)) return '睡前';
-  if(/足球/.test(t)) return '足球补给';
+  if(/足球|赛前|赛中|赛后/.test(t)) return '足球补给';
   if(/加餐/.test(t)) return '下午加餐';
   return '其他';
 }
