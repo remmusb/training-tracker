@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training HUD · 身体状态与训练大屏</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #070d18; min-height: 100vh; }
+  body { font-family: "PingFang SC", "Microsoft YaHei", -apple-system, "Segoe UI", sans-serif; display: flex; justify-content: center; }
+  :root {
+    --bg: #0b1220;
+    --line: rgba(94, 234, 212, 0.16);
+    --line2: rgba(148, 163, 184, 0.14);
+    --txt: #e2e8f0;
+    --txt2: #94a3b8;
+    --txt3: #64748b;
+    --cyan: #22d3ee;
+  }
+  .wrap {
+    width: 100%; max-width: 960px; box-sizing: border-box; color: var(--txt);
+    background:
+      radial-gradient(900px 300px at 85% -50px, rgba(34, 211, 238, 0.08), transparent 60%),
+      radial-gradient(700px 260px at 0% 110%, rgba(167, 139, 250, 0.06), transparent 60%),
+      var(--bg);
+    padding: 20px 20px 16px;
+    margin: 16px;
+    border-radius: 14px;
+    border: 1px solid var(--line2);
+    position: relative; overflow: hidden;
+  }
+  .wrap::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(148,163,184,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148,163,184,0.05) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .wrap > * { position: relative; }
+  .head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .title { font-size: 20px; font-weight: 600; letter-spacing: 1px; }
+  .title b { color: var(--cyan); font-weight: 600; }
+  .updated { font-size: 11px; color: var(--txt3); letter-spacing: 0.5px; }
+  .statusline { display: flex; align-items: center; gap: 8px; margin-block-start: 8px; }
+  .chip { font-size: 11px; padding: 3px 10px; border-radius: 999px; letter-spacing: 1px; border: 1px solid; }
+  .chip--alert { color: #f87171; border-color: rgba(248,113,113,.4); background: rgba(248,113,113,.08); }
+  .chip--warn { color: #fbbf24; border-color: rgba(251,191,36,.4); background: rgba(251,191,36,.08); }
+  .chip--ok { color: #34d399; border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.08); }
+  .status-text { font-size: 13px; color: var(--txt2); }
+  .pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 5px; animation: pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-block-start: 14px; }
+  .metric { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: linear-gradient(160deg, rgba(34,211,238,0.05), rgba(15,23,41,0.4)); }
+  .metric .label { font-size: 11px; color: var(--txt3); letter-spacing: 1px; }
+  .metric .value { font-size: 27px; font-weight: 600; line-height: 1.15; margin-block-start: 3px; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  .metric .value .unit { font-size: 12px; color: var(--txt3); font-weight: 400; }
+  .metric .sub { font-size: 11px; color: var(--txt2); margin-block-start: 3px; }
+  .metric .sub.up { color: #f87171; }
+  .metric .sub.down { color: #34d399; }
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-block-start: 10px; }
+  .charts.full { grid-template-columns: 1fr; }
+  .panel { border: 1px solid var(--line2); border-radius: 10px; padding: 10px 12px; background: rgba(15,23,41,0.55); }
+  .panel h2 { font-size: 13px; font-weight: 600; margin: 0 0 4px 0; color: var(--txt); letter-spacing: 0.5px; }
+  .panel h2::before { content: "\25B8 "; color: var(--cyan); }
+  .panel .hint { font-size: 10.5px; color: var(--txt3); margin-block-start: 3px; }
+  .section { font-size: 14px; font-weight: 600; margin-block: 14px 8px; letter-spacing: 0.5px; }
+  .section::before { content: "// "; color: var(--cyan); font-weight: 400; }
+  .plan { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .day { border: 1px solid var(--line2); border-radius: 8px; padding: 6px 8px; min-width: 0; background: rgba(15,23,41,0.55); }
+  .day.today { border-color: rgba(34,211,238,0.5); box-shadow: 0 0 12px rgba(34,211,238,0.12) inset; }
+  .day .dow { font-size: 10.5px; color: var(--txt3); }
+  .day .t { font-size: 12px; font-weight: 600; margin-block-start: 2px; line-height: 1.25; }
+  .day .n { font-size: 10.5px; color: var(--txt3); margin-block-start: 2px; line-height: 1.25; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-block-start: 4px; }
+  .dot--done { background: #34d399; box-shadow: 0 0 6px rgba(52,211,153,.7); }
+  .dot--skip { background: #f87171; box-shadow: 0 0 6px rgba(248,113,113,.7); }
+  .dot--todo { background: #64748b; }
+  .race { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; background: linear-gradient(90deg, rgba(34,211,238,0.07), transparent 60%); }
+  .race .name { font-size: 15px; font-weight: 600; }
+  .race .count { font-size: 26px; font-weight: 600; color: var(--cyan); font-variant-numeric: tabular-nums; }
+  .race .count .unit { font-size: 12px; color: var(--txt3); font-weight: 400; }
+  .race .date { font-size: 12px; color: var(--txt2); font-variant-numeric: tabular-nums; }
+  .race .note { font-size: 11.5px; color: var(--txt3); }
+  table.runs { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.runs th { font-size: 10.5px; color: var(--txt3); font-weight: 400; text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line2); letter-spacing: 1px; }
+  table.runs td { padding: 4px 6px; border-bottom: 1px solid rgba(148,163,184,0.08); font-variant-numeric: tabular-nums; color: var(--txt); }
+  table.runs tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; }
+  .coach { border-left: 3px solid var(--cyan); padding: 8px 12px; font-size: 13px; color: var(--txt2); background: rgba(34,211,238,0.05); border-radius: 0 8px 8px 0; margin-block-start: 12px; line-height: 1.55; }
+  .foot { font-size: 10.5px; color: var(--txt3); margin-block: 10px 4px; letter-spacing: 0.5px; }
+  svg .gridln { stroke: rgba(148,163,184,0.12); }
+  @media (max-width: 640px) {
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    .charts { grid-template-columns: 1fr; }
+    .plan { grid-template-columns: repeat(4, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="title">TRAINING <b>HUD</b> · 身体状态与训练大屏</div>
+    <div class="updated" id="updated"></div>
+  </div>
+  <div class="statusline"><span class="chip" id="statusChip"></span><span class="status-text" id="statusText"></span></div>
+  <div class="metrics" id="metrics"></div>
+  <div class="charts">
+    <div class="panel">
+      <h2>静息心率 · 基线 55</h2>
+      <svg id="rhrChart" width="100%" height="130" viewBox="0 0 320 130" preserveAspectRatio="none"></svg>
+      <div class="hint">红 = 高于 57（复跑门槛）。≤57 + 症状消失 24h 才重启</div>
+    </div>
+    <div class="panel">
+      <h2>睡眠 · 柱=时长 / 点=分数</h2>
+      <svg id="sleepChart" width="100%" height="130" viewBox="0 0 320 130" preserveAspectRatio="none"></svg>
+      <div class="hint">虚线 = 7.5h 目标。恢复期睡眠是唯一 KPI</div>
+    </div>
+  </div>
+  <div class="charts full">
+    <div class="panel">
+      <h2>周跑量 · km</h2>
+      <svg id="weekChart" width="100%" height="120" viewBox="0 0 640 120" preserveAspectRatio="none"></svg>
+      <div class="hint" id="weekHint"></div>
+    </div>
+  </div>
+  <div class="section">本周课表</div>
+  <div class="plan" id="plan"></div>
+  <div class="section">下一场</div>
+  <div class="race" id="race"></div>
+  <div class="section">最近跑步</div>
+  <div class="panel" style="padding: 2px 8px;">
+    <table class="runs" id="runs"></table>
+  </div>
+  <div class="coach" id="coach"></div>
+  <div class="foot">DATA: GARMIN CONNECT · PLAN: training-tracker 冬训版 · AUTO-UPDATED DAILY</div>
+</div>
+<script>
+const SAMPLE = {
+  updatedAt: "2026-10-30 09:55",
+  status: "赛后恢复 D5 · 感冒收尾期（体温正常）· 训练继续冻结",
+  statusLevel: "warn",
+  metrics: { restingHR: { today: 61, baseline: 55, delta: 6 }, sleep: { score: 64, hours: 6.47 }, weekKm: 0, stepsAvg: 12100 },
+  rhrTrend: [
+    {date:"10-21",value:62},{date:"10-22",value:58},{date:"10-23",value:59},
+    {date:"10-24",value:57},{date:"10-25",value:55},{date:"10-26",value:59},{date:"10-27",value:60},
+    {date:"10-28",value:61},{date:"10-29",value:59},{date:"10-30",value:61}
+  ],
+  sleepTrend: [
+    {date:"10-22",score:76,hours:6.57},{date:"10-23",score:61,hours:5.38},{date:"10-24",score:80,hours:7.35},
+    {date:"10-25",score:83,hours:7.10},{date:"10-26",score:56,hours:4.73},{date:"10-27",score:77,hours:7.43},
+    {date:"10-28",score:74,hours:5.98},{date:"10-29",score:63,hours:5.95},{date:"10-30",score:64,hours:6.47}
+  ],
+  weekVolume: [
+    {week:"9/8",km:12.7},{week:"9/15",km:27.1},{week:"9/22",km:26.0},{week:"9/29",km:28.8},
+    {week:"10/6",km:30.0},{week:"10/13",km:8.8},{week:"10/20",km:65.2},{week:"10/27",km:0}
+  ],
+  weekPlan: [
+    {day:"周一", title:"完全休息", done:true, note:"✓"},
+    {day:"周二", title:"休息散步", done:true, note:"✓"},
+    {day:"周三", title:"可选游泳", done:false, note:"生病取消"},
+    {day:"周四", title:"试跑3-4K", done:false, note:"生病冻结"},
+    {day:"周五", title:"今日·休养", done:null, note:"防蚊+早睡", today:true},
+    {day:"周六", title:"休息/筋膜刀", done:null, note:"看心率"},
+    {day:"周日", title:"足球", done:null, note:"大概率取消"}
+  ],
+  nextRace: { name:"深圳马拉松（待抽签）", date:"2026-12-06", daysLeft: 37, note:"定位：超级LSD · 心率≤150 全程 · 补给演练" },
+  recentRuns: [
+    {date:"10-25", name:"成都马拉松 · 破四 3:59:23", km:42.62, pace:"5'37\"", hr:171},
+    {date:"10-21", name:"比赛周 5K+M唤醒", km:7.06, pace:"6'53\"", hr:144},
+    {date:"10-19", name:"最后长课 15K", km:15.48, pace:"6'50\"", hr:151},
+    {date:"10-14", name:"轻松跑 8K", km:8.81, pace:"6'22\"", hr:144},
+    {date:"10-11", name:"模拟赛 29K（实跑25K）", km:25.01, pace:"6'50\"", hr:157}
+  ],
+  coachNote: "教练：体温正常、嗓子缓解，往好的方向走。但静息心率 61 还在高位，别急——周日球不踢，今晚防蚊早睡，明早看心率定下周节奏。"
+};
+function render(d){
+  document.getElementById('updated').textContent = 'SYNC ' + (d.updatedAt || '');
+  const chip = document.getElementById('statusChip');
+  const chipTxt = d.statusLevel === 'alert' ? 'FREEZE' : d.statusLevel === 'warn' ? 'WATCH' : 'GO';
+  chip.innerHTML = '<span class="pulse"></span>' + chipTxt;
+  chip.className = 'chip chip--' + (d.statusLevel || 'ok');
+  document.getElementById('statusText').textContent = d.status || '';
+  const m = d.metrics || {};
+  const rhr = m.restingHR || {};
+  const deltaTxt = rhr.delta > 0 ? `<div class="sub up">▲ 基线 +${rhr.delta}</div>` : rhr.delta < 0 ? `<div class="sub down">▼ 基线 ${rhr.delta}</div>` : `<div class="sub">与基线持平</div>`;
+  const steps = m.stepsAvg ? (m.stepsAvg/1000).toFixed(1) : '—';
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric"><div class="label">静息心率 RHR</div><div class="value">${rhr.today ?? '—'}</div><div class="sub">基线 ${rhr.baseline ?? '—'}</div>${deltaTxt}</div>
+    <div class="metric"><div class="label">睡眠分 SLEEP</div><div class="value">${m.sleep?.score ?? '—'}</div><div class="sub">${m.sleep?.hours ?? '—'} 小时</div></div>
+    <div class="metric"><div class="label">本周跑量 WEEK</div><div class="value">${m.weekKm ?? 0}<span class="unit"> km</span></div><div class="sub">恢复周 · 计划内</div></div>
+    <div class="metric"><div class="label">日均步数 STEPS</div><div class="value">${steps}<span class="unit"> k</span></div><div class="sub">10日均值 · 剔比赛日</div></div>`;
+  const rsvg = document.getElementById('rhrChart');
+  const rt = d.rhrTrend || [];
+  if (rt.length){
+    const W=320,H=130,pl=28,pb=20,pt=12;
+    const vals=rt.map(p=>p.value), min=Math.min(...vals,55)-2, max=Math.max(...vals,55)+2;
+    const x=i=>pl+i*(W-pl-8)/(rt.length-1||1);
+    const y=v=>pt+(max-v)*(H-pt-pb)/(max-min||1);
+    let bars='',dots='',labels='',grid='';
+    for(let g=0;g<4;g++){ const gy=pt+g*(H-pt-pb)/3; grid+=`<line class="gridln" x1="${pl}" y1="${gy}" x2="${W-8}" y2="${gy}"/>`; }
+    rt.forEach((p,i)=>{
+      const over = p.value>57;
+      const col = over ? '#f87171' : '#38bdf8';
+      bars += `<rect x="${x(i)-7}" y="${y(p.value)}" width="13" height="${H-pb-y(p.value)}" rx="3" fill="${col}" opacity="0.85"/>`;
+      labels += `<text x="${x(i)}" y="${H-6}" font-size="9" text-anchor="middle" fill="#64748b">${p.date.slice(3)}</text>`;
+      dots += `<text x="${x(i)}" y="${y(p.value)-3}" font-size="9" text-anchor="middle" fill="#94a3b8">${p.value}</text>`;
+    });
+    rsvg.innerHTML = grid + bars + dots + labels +
+      `<line x1="${pl}" y1="${y(55)}" x2="${W-8}" y2="${y(55)}" stroke="#64748b" stroke-dasharray="4 3"/>`+
+      `<text x="${pl-3}" y="${y(55)+3}" font-size="9" text-anchor="end" fill="#64748b">55</text>`;
+  }
+  const ssvg = document.getElementById('sleepChart');
+  const st = d.sleepTrend || [];
+  if (st.length){
+    const W=320,H=130,pl=26,pb=20,pt=12;
+    const maxH = 9;
+    const bw = (W-pl-8)/st.length;
+    const x=i=>pl+i*bw+bw/2;
+    const y=h=>pt+(maxH-h)*(H-pt-pb)/maxH;
+    let bars='',pts='',labels='',grid='';
+    for(let g=0;g<4;g++){ const gy=pt+g*(H-pt-pb)/3; grid+=`<line class="gridln" x1="${pl}" y1="${gy}" x2="${W-8}" y2="${gy}"/>`; }
+    st.forEach((p,i)=>{
+      const good = p.hours>=7;
+      bars += `<rect x="${x(i)-8}" y="${y(p.hours)}" width="16" height="${H-pb-y(p.hours)}" rx="3" fill="#38bdf8" opacity="${good?0.9:0.4}"/>`;
+      const sy = pt + (100-p.score)*(H-pt-pb)/100;
+      pts += `<circle cx="${x(i)}" cy="${sy}" r="3" fill="#a78bfa"/>`;
+      labels += `<text x="${x(i)}" y="${H-6}" font-size="9" text-anchor="middle" fill="#64748b">${p.date.slice(3)}</text>`;
+    });
+    ssvg.innerHTML = grid + bars + pts + labels +
+      `<line x1="${pl}" y1="${y(7.5)}" x2="${W-8}" y2="${y(7.5)}" stroke="#64748b" stroke-dasharray="4 3"/>`+
+      `<text x="${pl-3}" y="${y(7.5)+3}" font-size="9" text-anchor="end" fill="#64748b">7.5</text>`;
+  }
+  const wsvg = document.getElementById('weekChart');
+  const wv = d.weekVolume || [];
+  if (wv.length){
+    const W=640,H=120,pl=30,pb=20,pt=14;
+    const maxV = Math.max(...wv.map(p=>p.km), 30);
+    const bw = (W-pl-10)/wv.length;
+    const x=i=>pl+i*bw+bw/2;
+    const y=v=>pt+(maxV-v)*(H-pt-pb)/maxV;
+    let bars='',labels='',vals='',grid='';
+    for(let g=0;g<3;g++){ const gy=pt+g*(H-pt-pb)/2; grid+=`<line class="gridln" x1="${pl}" y1="${gy}" x2="${W-10}" y2="${gy}"/>`; }
+    wv.forEach((p,i)=>{
+      const isRace = p.km>=60, isRest = p.km===0;
+      const col = isRace ? '#34d399' : isRest ? '#64748b' : '#38bdf8';
+      const h = Math.max(2, H-pb-y(p.km));
+      bars += `<rect x="${x(i)-22}" y="${H-pb-h}" width="44" height="${h}" rx="4" fill="${col}" opacity="0.85"/>`;
+      labels += `<text x="${x(i)}" y="${H-6}" font-size="10" text-anchor="middle" fill="#64748b">${p.week}</text>`;
+      vals += `<text x="${x(i)}" y="${H-pb-h-4}" font-size="10" text-anchor="middle" fill="#94a3b8">${isRest?'休养':p.km}</text>`;
+    });
+    wsvg.innerHTML = grid + bars + labels + vals;
+    document.getElementById('weekHint').textContent = '绿 = 比赛周（成马 42.6K）· 灰 = 恢复休养周 · 冬训目标周跑量 30–38K';
+  }
+  document.getElementById('plan').innerHTML = (d.weekPlan||[]).map(p=>{
+    const dot = p.done===true ? 'dot--done' : p.done===false ? 'dot--skip' : 'dot--todo';
+    return `<div class="day${p.today?' today':''}"><div class="dow">${p.day}</div><div class="t">${p.title}</div><div class="n">${p.note||''}</div><span class="dot ${dot}"></span></div>`;
+  }).join('');
+  const r = d.nextRace || {};
+  document.getElementById('race').innerHTML = r.name ? `<span class="name">${r.name}</span><span class="count">${r.daysLeft ?? '—'}<span class="unit"> 天后</span></span><span class="date">${r.date||''}</span><span class="note">${r.note||''}</span>` : '—';
+  document.getElementById('runs').innerHTML =
+    `<tr><th>日期</th><th>内容</th><th class="num">距离</th><th class="num">配速</th><th class="num">均心</th></tr>` +
+    (d.recentRuns||[]).map(r=>`<tr><td>${r.date}</td><td>${r.name}</td><td class="num">${r.km}K</td><td class="num">${r.pace}</td><td class="num">${r.hr}</td></tr>`).join('');
+  document.getElementById('coach').textContent = d.coachNote || '';
+}
+render(SAMPLE);
+</script>
+</body>
+</html>
