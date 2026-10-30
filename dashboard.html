@@ -88,7 +88,7 @@
   .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-block-start: 4px; }
   .dot--done { background: var(--green); box-shadow: 0 0 6px rgba(52,211,153,.7); }
   .dot--skip { background: var(--red); box-shadow: 0 0 6px rgba(248,113,113,.7); }
-  .dot--todo { background: #64748b; }
+  .dot--todo { background: var(--txt3); }
 
   .race {
     border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px;
@@ -100,6 +100,12 @@
   .race .count .unit { font-size: 12px; color: var(--txt3); font-weight: 400; }
   .race .date { font-size: 12px; color: var(--txt2); font-variant-numeric: tabular-nums; }
   .race .note { font-size: 11.5px; color: var(--txt3); }
+
+  table.runs { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.runs th { font-size: 10.5px; color: var(--txt3); font-weight: 400; text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line2); letter-spacing: 1px; }
+  table.runs td { padding: 4px 6px; border-bottom: 1px solid rgba(148,163,184,0.08); font-variant-numeric: tabular-nums; color: var(--txt); }
+  table.runs tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; }
 
   .coach {
     border-left: 3px solid var(--cyan); padding: 8px 12px; font-size: 13px; color: var(--txt2);
@@ -114,8 +120,11 @@
   .bc .cell .v { font-size: 17px; font-weight: 600; margin-block-start: 2px; font-variant-numeric: tabular-nums; }
   .bc .cell .v .unit { font-size: 10px; color: var(--txt3); font-weight: 400; }
   .bc .cell .s { font-size: 10px; color: var(--green); margin-block-start: 1px; }
+  .bc .cell .s.warnv { color: var(--amber); }
   .soc-sum { font-size: 11.5px; color: var(--txt2); margin-block-start: 8px; }
   .soc-sum b { color: var(--cyan); font-weight: 600; }
+  td.rec, th.rec { text-align: right; }
+  .toprec { color: var(--amber); }
   @media (max-width: 640px) {
     .metrics { grid-template-columns: repeat(2, 1fr); }
     .charts { grid-template-columns: 1fr; }
@@ -164,13 +173,13 @@
   <div class="section">最近跑步</div>
   <div class="panel">
     <svg id="runChart" width="100%" height="150" viewBox="0 0 640 150" preserveAspectRatio="none"></svg>
-    <div class="hint">绿线 = 距离 km · 红线 = 平均心率（右轴）· 底部第二行 = 配速</div>
+    <div class="hint">绿线 = 距离 km · 下方三行 = 日期 / 配速 / 均心率</div>
   </div>
 
   <div class="section">足球 · 神仙球背心数据</div>
   <div class="panel" id="soccerPanel">
-    <svg id="soccerChart" width="100%" height="160" viewBox="0 0 640 160" preserveAspectRatio="none"></svg>
-    <div class="hint">蓝线 = 总跑动 · 紫线 = 高强度跑 · 黄虚线 = 极速 m/s（右轴）</div>
+    <svg id="soccerChart" width="100%" height="170" viewBox="0 0 640 170" preserveAspectRatio="none"></svg>
+    <div class="hint">蓝线 = 总跑动 · 紫线 = 高强度跑 m · 下方三行 = 日期 / 冲刺 / 极速 m/s</div>
     <div class="soc-sum" id="soccerSum"></div>
   </div>
 
@@ -184,10 +193,10 @@
 
 <script>
 const SAMPLE = {
-  updatedAt: "2026-10-30 12:08",
+  updatedAt: "2026-10-30 09:55",
   status: "赛后恢复 D5 · 感冒收尾期（体温正常）· 训练继续冻结",
   statusLevel: "warn",
-  metrics: { restingHR: { today: 61, baseline: 55, delta: 6 }, sleep: { score: 64, hours: 6.47 }, vo2max: { value: 48, date: "10-25" }, weekKm: 0, stepsAvg: 12261 },
+  metrics: { restingHR: { today: 61, baseline: 55, delta: 6 }, sleep: { score: 64, hours: 6.47 }, weekKm: 0, stepsAvg: 12100, vo2max: { value: 48, date: "10-25" } },
   rhrTrend: [
     {date:"10-21",value:62},{date:"10-22",value:58},{date:"10-23",value:59},
     {date:"10-24",value:57},{date:"10-25",value:55},{date:"10-26",value:59},{date:"10-27",value:60},
@@ -199,8 +208,8 @@ const SAMPLE = {
     {date:"10-28",score:74,hours:5.98},{date:"10-29",score:63,hours:5.95},{date:"10-30",score:64,hours:6.47}
   ],
   weekVolume: [
-    {week:"9/7",km:4.7},{week:"9/14",km:27.1},{week:"9/21",km:26.0},{week:"9/28",km:28.8},
-    {week:"10/5",km:30.0},{week:"10/12",km:8.8},{week:"10/19",km:65.2},{week:"10/26",km:0}
+    {week:"9/8",km:12.7},{week:"9/15",km:27.1},{week:"9/22",km:26.0},{week:"9/29",km:28.8},
+    {week:"10/6",km:30.0},{week:"10/13",km:8.8},{week:"10/20",km:65.2},{week:"10/27",km:0}
   ],
   weekPlan: [
     {day:"周一", title:"完全休息", done:true, note:"✓"},
@@ -219,7 +228,7 @@ const SAMPLE = {
     {date:"10-14", name:"轻松跑 8K", km:8.81, pace:"6'22\"", hr:144},
     {date:"10-11", name:"模拟赛 29K（实跑25K）", km:25.01, pace:"6'50\"", hr:157}
   ],
-  coachNote: "教练：心率 61 连续 5 天压在基线上方，睡眠 6.5 小时也不够。今天继续养着，周日球取消，11/3 冬训能不能开跑，明早心率说了算。",
+  coachNote: "教练：体温正常、嗓子缓解，往好的方向走。但静息心率 61 还在高位，别急——周日球不踢，今晚防蚊早睡，明早看心率定下周节奏。",
   soccer: [
     {date:"10-11", pos:"中后卫", min:71, m:5349, hs:757, sprints:32, top:7.35},
     {date:"10-10", pos:"后腰", min:36, m:3418, hs:408, sprints:17, top:6.9},
@@ -320,9 +329,12 @@ function render(d){
         }
       });
     });
-    labels.forEach((lb,i)=>{
-      out+=`<text x="${x(i)}" y="${H-(cfg.xLabels2?14:8)}" font-size="8.5" text-anchor="middle" fill="#64748b">${lb}</text>`;
-      if(cfg.xLabels2) out+=`<text x="${x(i)}" y="${H-3}" font-size="8.5" text-anchor="middle" fill="#475569">${cfg.xLabels2[i]||''}</text>`;
+    const rows = cfg.xRows || [{labels: labels}];
+    rows.forEach((row, ri)=>{
+      const yy = H - 6 - (rows.length-1-ri)*11;
+      (row.labels||[]).forEach((lb,i)=>{
+        out+=`<text x="${x(i)}" y="${yy}" font-size="8.5" text-anchor="middle" fill="${row.color||'#64748b'}">${lb}</text>`;
+      });
     });
     svg.innerHTML=out;
   }
@@ -368,33 +380,40 @@ function render(d){
   const r = d.nextRace || {};
   document.getElementById('race').innerHTML = r.name ? `<span class="name">${r.name}</span><span class="count">${r.daysLeft ?? '—'}<span class="unit"> 天后</span></span><span class="date">${r.date||''}</span><span class="note">${r.note||''}</span>` : '—';
 
-  // Recent runs: km area + HR line (right axis), pace as second x-label row
+  // Recent runs: single line (km) + 3 label rows below: date / pace / HR
   const runs = (d.recentRuns||[]).slice().reverse();
   drawLines('runChart', {
-    W:640, H:150, pl:30, pb:30, pt:22,
+    W:640, H:150, pl:30, pb:44, pt:22, pr:14,
     labels: runs.map(r=>r.date),
-    xLabels2: runs.map(r=>r.pace),
-    series: [
-      { values: runs.map(r=>r.km), color:'#34d399', fill:true, dotLabel:true, labelFmt:v=>v+'K' },
-      { values: runs.map(r=>r.hr), color:'#f87171', axis:'r', dotLabel:true }
+    xRows: [
+      { labels: runs.map(r=>r.date) },
+      { labels: runs.map(r=>r.pace), color:'#475569' },
+      { labels: runs.map(r=>String(r.hr)), color:'#f87171' }
     ],
-    padMin: 3, padMax: 6, rPadMin: 8, rPadMax: 8
+    series: [
+      { values: runs.map(r=>r.km), color:'#34d399', fill:true, dotLabel:true, labelFmt:v=>v+'K' }
+    ],
+    padMin: 3, padMax: 8
   });
 
-  // Soccer: distance area + high-intensity line + top speed dashed line (right axis)
+  // Soccer: distance area + high-intensity line, sprints/top-speed as label rows below
   const soc = (d.soccer||[]).slice().reverse();
   const socPanel = document.getElementById('soccerPanel');
   if (soc.length){
     socPanel.style.display = '';
     drawLines('soccerChart', {
-      W:640, H:160, pl:38, pb:22, pt:22,
+      W:640, H:170, pl:38, pb:44, pt:22, pr:14,
       labels: soc.map(s=>s.date),
+      xRows: [
+        { labels: soc.map(s=>s.date) },
+        { labels: soc.map(s=>s.sprints+'冲'), color:'#94a3b8' },
+        { labels: soc.map(s=>s.top!=null?s.top.toFixed(2):'—'), color:'#fbbf24' }
+      ],
       series: [
         { values: soc.map(s=>s.m), color:'#38bdf8', fill:true, dotLabel:true, labelFmt:v=>(v/1000).toFixed(1)+'K' },
-        { values: soc.map(s=>s.hs), color:'#a78bfa', dotLabel:false },
-        { values: soc.map(s=>s.top), color:'#fbbf24', axis:'r', dash:true, dotLabel:true, labelFmt:v=>v.toFixed(1) }
+        { values: soc.map(s=>s.hs), color:'#a78bfa', dotLabel:true, labelBelow:true, labelFmt:v=>v+'m' }
       ],
-      padMin: 600, padMax: 1200, rPadMin: 0.5, rPadMax: 0.5
+      padMin: 600, padMax: 1200
     });
     const totM = soc.reduce((a,s)=>a+s.m,0);
     const totSpr = soc.reduce((a,s)=>a+s.sprints,0);
