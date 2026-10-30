@@ -48,7 +48,7 @@
   .status-text { font-size: 13px; color: var(--txt2); }
   .pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 5px; animation: pulse 1.8s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
-  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-block-start: 14px; }
+  .metrics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-block-start: 14px; }
   .metric { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: linear-gradient(160deg, rgba(34,211,238,0.05), rgba(15,23,41,0.4)); }
   .metric .label { font-size: 11px; color: var(--txt3); letter-spacing: 1px; }
   .metric .value { font-size: 27px; font-weight: 600; line-height: 1.15; margin-block-start: 3px; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
@@ -138,7 +138,7 @@ const SAMPLE = {
   updatedAt: "2026-10-30 11:01",
   status: "成马赛后 D5 · 恢复周 · 静息心率高于基线 +6 · 训练继续冻结",
   statusLevel: "warn",
-  metrics: { restingHR: { today: 61, baseline: 55, delta: 6 }, sleep: { score: 64, hours: 6.47 }, weekKm: 0, stepsAvg: 12261 },
+  metrics: { restingHR: { today: 61, baseline: 55, delta: 6 }, sleep: { score: 64, hours: 6.47 }, vo2max: { value: 48, date: "10-25" }, weekKm: 0, stepsAvg: 12261 },
   rhrTrend: [
     {date:"10-21",value:62},{date:"10-22",value:58},{date:"10-23",value:59},
     {date:"10-24",value:57},{date:"10-25",value:55},{date:"10-26",value:59},{date:"10-27",value:60},
@@ -181,11 +181,13 @@ function render(d){
   document.getElementById('statusText').textContent = d.status || '';
   const m = d.metrics || {};
   const rhr = m.restingHR || {};
+  const vo2 = m.vo2max || {};
   const deltaTxt = rhr.delta > 0 ? `<div class="sub up">▲ 基线 +${rhr.delta}</div>` : rhr.delta < 0 ? `<div class="sub down">▼ 基线 ${rhr.delta}</div>` : `<div class="sub">与基线持平</div>`;
   const steps = m.stepsAvg ? (m.stepsAvg/1000).toFixed(1) : '—';
   document.getElementById('metrics').innerHTML = `
     <div class="metric"><div class="label">静息心率 RHR</div><div class="value">${rhr.today ?? '—'}</div><div class="sub">基线 ${rhr.baseline ?? '—'}</div>${deltaTxt}</div>
     <div class="metric"><div class="label">睡眠分 SLEEP</div><div class="value">${m.sleep?.score ?? '—'}</div><div class="sub">${m.sleep?.hours ?? '—'} 小时</div></div>
+    <div class="metric"><div class="label">摄氧量 VO2MAX</div><div class="value">${vo2.value ?? '—'}</div><div class="sub">${vo2.date ? vo2.date + ' 实测' : '最近跑步记录'}</div></div>
     <div class="metric"><div class="label">本周跑量 WEEK</div><div class="value">${m.weekKm ?? 0}<span class="unit"> km</span></div><div class="sub">恢复周 · 计划内</div></div>
     <div class="metric"><div class="label">日均步数 STEPS</div><div class="value">${steps}<span class="unit"> k</span></div><div class="sub">10日均值 · 剔比赛日</div></div>`;
   const rsvg = document.getElementById('rhrChart');
