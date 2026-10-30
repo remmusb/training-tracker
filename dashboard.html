@@ -1,1 +1,580 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training HUD · 身体状态与训练大屏</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #070d18; min-height: 100vh; }
+  body { display: flex; justify-content: center; }
+  body { font-family: "PingFang SC", "Microsoft YaHei", -apple-system, "Segoe UI", sans-serif; }
+  :root {
+    --bg: #0b1220;
+    --bg2: #0f1729;
+    --line: rgba(94, 234, 212, 0.16);
+    --line2: rgba(148, 163, 184, 0.14);
+    --txt: #e2e8f0;
+    --txt2: #94a3b8;
+    --txt3: #64748b;
+    --cyan: #22d3ee;
+    --blue: #38bdf8;
+    --green: #34d399;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --purple: #a78bfa;
+  }
+  .wrap {
+    width: 100%; max-width: 960px; box-sizing: border-box; color: var(--txt);
+    background:
+      radial-gradient(900px 300px at 85% -50px, rgba(34, 211, 238, 0.08), transparent 60%),
+      radial-gradient(700px 260px at 0% 110%, rgba(167, 139, 250, 0.06), transparent 60%),
+      var(--bg);
+    padding: 20px 20px 16px;
+    margin: 16px;
+    border-radius: 14px;
+    border: 1px solid var(--line2);
+    position: relative; overflow: hidden;
+  }
+  .wrap::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(148,163,184,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148,163,184,0.05) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .wrap > * { position: relative; }
+
+  .head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .title { font-size: 20px; font-weight: 600; letter-spacing: 1px; }
+  .title b { color: var(--cyan); font-weight: 600; }
+  .updated { font-size: 11px; color: var(--txt3); letter-spacing: 0.5px; }
+  .statusline { display: flex; align-items: center; gap: 8px; margin-block-start: 8px; }
+  .chip { font-size: 11px; padding: 3px 10px; border-radius: 999px; letter-spacing: 1px; border: 1px solid; }
+  .chip--alert { color: var(--red); border-color: rgba(248,113,113,.4); background: rgba(248,113,113,.08); }
+  .chip--warn { color: var(--amber); border-color: rgba(251,191,36,.4); background: rgba(251,191,36,.08); }
+  .chip--ok { color: var(--green); border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.08); }
+  .status-text { font-size: 13px; color: var(--txt2); }
+  .pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 5px; animation: pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+  .metrics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-block-start: 14px; }
+  .metric {
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+    background: linear-gradient(160deg, rgba(34,211,238,0.05), rgba(15,23,41,0.4));
+  }
+  .metric .label { font-size: 11px; color: var(--txt3); letter-spacing: 1px; }
+  .metric .value { font-size: 27px; font-weight: 600; line-height: 1.15; margin-block-start: 3px; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  .metric .value .unit { font-size: 12px; color: var(--txt3); font-weight: 400; }
+  .metric .sub { font-size: 11px; color: var(--txt2); margin-block-start: 3px; }
+  .metric .sub.up { color: var(--red); }
+  .metric .sub.down { color: var(--green); }
+
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-block-start: 10px; }
+  .charts.full { grid-template-columns: 1fr; }
+  .panel { border: 1px solid var(--line2); border-radius: 10px; padding: 10px 12px; background: rgba(15,23,41,0.55); }
+  .panel h2 { font-size: 13px; font-weight: 600; margin: 0 0 4px 0; color: var(--txt); letter-spacing: 0.5px; }
+  .panel h2::before { content: "▸ "; color: var(--cyan); }
+  .panel .hint { font-size: 10.5px; color: var(--txt3); margin-block-start: 3px; }
+
+  .section { font-size: 14px; font-weight: 600; margin-block: 14px 8px; letter-spacing: 0.5px; }
+  .section::before { content: "// "; color: var(--cyan); font-weight: 400; }
+
+  .plan { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .day { border: 1px solid var(--line2); border-radius: 8px; padding: 6px 8px; min-width: 0; background: rgba(15,23,41,0.55); }
+  .day.today { border-color: rgba(34,211,238,0.5); box-shadow: 0 0 12px rgba(34,211,238,0.12) inset; }
+  .day .dow { font-size: 10.5px; color: var(--txt3); }
+  .day .t { font-size: 12px; font-weight: 600; margin-block-start: 2px; line-height: 1.25; }
+  .day .n { font-size: 10.5px; color: var(--txt3); margin-block-start: 2px; line-height: 1.25; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-block-start: 4px; }
+  .dot--done { background: var(--green); box-shadow: 0 0 6px rgba(52,211,153,.7); }
+  .dot--skip { background: var(--red); box-shadow: 0 0 6px rgba(248,113,113,.7); }
+  .dot--todo { background: var(--txt3); }
+
+  .race {
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px;
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    background: linear-gradient(90deg, rgba(34,211,238,0.07), transparent 60%);
+  }
+  .race .name { font-size: 15px; font-weight: 600; }
+  .race .count { font-size: 26px; font-weight: 600; color: var(--cyan); font-variant-numeric: tabular-nums; }
+  .race .count .unit { font-size: 12px; color: var(--txt3); font-weight: 400; }
+  .race .date { font-size: 12px; color: var(--txt2); font-variant-numeric: tabular-nums; }
+  .race .note { font-size: 11.5px; color: var(--txt3); }
+
+  table.runs { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.runs th { font-size: 10.5px; color: var(--txt3); font-weight: 400; text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line2); letter-spacing: 1px; }
+  table.runs td { padding: 4px 6px; border-bottom: 1px solid rgba(148,163,184,0.08); font-variant-numeric: tabular-nums; color: var(--txt); }
+  table.runs tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; }
+
+  .coach {
+    border-left: 3px solid var(--cyan); padding: 8px 12px; font-size: 13px; color: var(--txt2);
+    background: rgba(34,211,238,0.05); border-radius: 0 8px 8px 0; margin-block-start: 12px; line-height: 1.55;
+  }
+  .foot { font-size: 10.5px; color: var(--txt3); margin-block: 10px 4px; letter-spacing: 0.5px; }
+  svg .gridln { stroke: rgba(148,163,184,0.12); }
+
+  .bc { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .bc .cell { border: 1px solid var(--line2); border-radius: 8px; padding: 7px 9px; background: rgba(15,23,41,0.55); min-width: 0; }
+  .bc .cell .l { font-size: 10px; color: var(--txt3); letter-spacing: 0.5px; }
+  .bc .cell .v { font-size: 17px; font-weight: 600; margin-block-start: 2px; font-variant-numeric: tabular-nums; }
+  .bc .cell .v .unit { font-size: 10px; color: var(--txt3); font-weight: 400; }
+  .bc .cell .s { font-size: 10px; color: var(--green); margin-block-start: 1px; }
+  .bc .cell .s.warnv { color: var(--amber); }
+  .soc-sum { font-size: 11.5px; color: var(--txt2); margin-block-start: 8px; }
+  .soc-sum b { color: var(--cyan); font-weight: 600; }
+  td.rec, th.rec { text-align: right; }
+  .toprec { color: var(--amber); }
+  .donutwrap { display: flex; gap: 16px; align-items: center; }
+  .legend { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .legend .li { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--txt2); font-variant-numeric: tabular-nums; }
+  .legend .sw { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+  .legend .li b { color: var(--txt); font-weight: 600; }
+  .legend .li .r { margin-left: auto; color: var(--txt3); }
+  .loadrow { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; margin-block-end: 6px; }
+  .lcell { border: 1px solid var(--line2); border-radius: 8px; padding: 6px 12px; background: rgba(15,23,41,0.55); }
+  .lcell .l { font-size: 10px; color: var(--txt3); letter-spacing: 0.5px; }
+  .lcell .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; margin-block-start: 2px; }
+  .lcell .s { font-size: 10px; color: var(--txt3); }
+  .gaugewrap { flex: 1; min-width: 220px; align-self: center; padding: 0 4px; }
+  .gauge { position: relative; height: 14px; border-radius: 7px; opacity: 0.9;
+    background: linear-gradient(90deg, #f87171 0%, #fbbf24 35%, #34d399 50%, #38bdf8 75%); }
+  .gauge .mark { position: absolute; top: -4px; width: 4px; height: 22px; background: #e2e8f0; border-radius: 2px; box-shadow: 0 0 6px rgba(255,255,255,.8); transform: translateX(-2px); }
+  .gaugetags { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--txt3); margin-block-start: 4px; }
+  .coach { display: flex; gap: 12px; align-items: center; }
+  .coach-avatar { width: 56px; height: 56px; border-radius: 50%; flex: none; border: 2px solid var(--cyan); box-shadow: 0 0 10px rgba(34,211,238,.4); object-fit: cover; }
+  @media (max-width: 640px) {
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    .charts { grid-template-columns: 1fr; }
+    .plan { grid-template-columns: repeat(4, 1fr); }
+    .bc { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="title">⚡ TRAINING <b>HUD</b> · 身体状态与训练大屏</div>
+    <div class="updated" id="updated"></div>
+  </div>
+  <div class="statusline"><span class="chip" id="statusChip"></span><span class="status-text" id="statusText"></span></div>
+
+  <div class="metrics" id="metrics"></div>
+
+  <div class="charts">
+    <div class="panel">
+      <h2>❤️ 静息心率 · 基线 55</h2>
+      <svg id="rhrChart" width="100%" height="130" viewBox="0 0 320 130" preserveAspectRatio="none"></svg>
+      <div class="hint">红色虚线 = 57 复跑门槛 · 灰虚线 = 基线 55</div>
+    </div>
+    <div class="panel">
+      <h2>😴 睡眠 · 时长 / 分数</h2>
+      <svg id="sleepChart" width="100%" height="130" viewBox="0 0 320 130" preserveAspectRatio="none"></svg>
+      <div class="hint">蓝线 = 时长 h · 紫线 = 睡眠分（右轴）· 灰虚线 = 7.5h 目标</div>
+    </div>
+  </div>
+
+  <div class="charts full">
+    <div class="panel">
+      <h2>📈 周跑量 · km</h2>
+      <svg id="weekChart" width="100%" height="120" viewBox="0 0 640 120" preserveAspectRatio="none"></svg>
+      <div class="hint" id="weekHint"></div>
+    </div>
+  </div>
+
+  <div class="charts full" id="loadPanel" style="display:none">
+    <div class="panel">
+      <h2>🔋 训练负荷 · CTL / ATL / TSB</h2>
+      <div class="loadrow">
+        <div class="lcell"><div class="l">体能 CTL</div><div class="v" id="ctlV" style="color:var(--blue)">—</div><div class="s">长期负荷 · km当量/周</div></div>
+        <div class="lcell"><div class="l">疲劳 ATL</div><div class="v" id="atlV" style="color:var(--amber)">—</div><div class="s">短期负荷 · km当量/周</div></div>
+        <div class="lcell"><div class="l">状态 TSB</div><div class="v" id="tsbV">—</div><div class="s" id="tsbS">—</div></div>
+        <div class="gaugewrap">
+          <div class="gauge"><div class="mark" id="tsbMark" style="left:50%"></div></div>
+          <div class="gaugetags"><span>过度疲劳</span><span>最佳竞技</span><span>状态清新</span></div>
+        </div>
+      </div>
+      <svg id="tsbChart" width="100%" height="90" viewBox="0 0 640 90" preserveAspectRatio="none"></svg>
+      <div class="hint">TSB &gt; 0 = 体能超过疲劳（适合比赛/上强度）· TSB &lt; 0 = 疲劳积累（正常训练态）· 按跑量当量估算</div>
+    </div>
+  </div>
+
+  <div class="section">📅 本周课表</div>
+  <div class="plan" id="plan"></div>
+
+  <div class="section">🏁 下一场</div>
+  <div class="race" id="race"></div>
+
+  <div class="section">🏃 最近跑步</div>
+  <div class="panel">
+    <div class="donutwrap">
+      <svg id="runDonut" width="170" height="170" viewBox="0 0 170 170"></svg>
+      <div class="legend" id="runLegend"></div>
+    </div>
+    <svg id="runChart" width="100%" height="155" viewBox="0 0 640 155" preserveAspectRatio="none" style="margin-top:6px"></svg>
+    <div class="hint">圆环 = 近 5 次跑量占比 · 绿线 = 距离趋势 · 下方三行 = 日期 / 配速 / 均心率</div>
+  </div>
+
+  <div class="section">⚽ 足球 · 神仙球背心数据</div>
+  <div class="panel" id="soccerPanel">
+    <div class="donutwrap">
+      <svg id="socDonut" width="170" height="170" viewBox="0 0 170 170"></svg>
+      <div class="legend" id="socLegend"></div>
+    </div>
+    <svg id="soccerChart" width="100%" height="175" viewBox="0 0 640 175" preserveAspectRatio="none" style="margin-top:6px"></svg>
+    <div class="hint">圆环 = 强度构成 · 蓝线 = 总跑动 · 紫线 = 高强度跑 · 下方三行 = 日期 / 冲刺 / 极速</div>
+    <div class="soc-sum" id="soccerSum"></div>
+  </div>
+
+  <div class="section">🧬 体质档案</div>
+  <div class="bc" id="bodyComp"></div>
+  <div class="soc-sum" id="bodyNote"></div>
+
+  <div class="coach"><img class="coach-avatar" id="coachAvatar" src="" alt="" style="display:none"><span id="coach"></span></div>
+  <div class="foot">DATA: GARMIN CONNECT · PLAN: training-tracker 冬训版 · AUTO-UPDATED DAILY · SOCCER/BODY: COACH MAINTAINED</div>
+</div>
+
+<script>
+const SAMPLE = {
+  updatedAt: "2026-10-30 09:55",
+  status: "赛后恢复 D5 · 感冒收尾期（体温正常）· 训练继续冻结",
+  statusLevel: "warn",
+  metrics: { restingHR: { today: 61, baseline: 55, delta: 6 }, sleep: { score: 64, hours: 6.47 }, weekKm: 0, stepsAvg: 12100, vo2max: { value: 48, date: "10-25" } },
+  rhrTrend: [
+    {date:"10-21",value:62},{date:"10-22",value:58},{date:"10-23",value:59},
+    {date:"10-24",value:57},{date:"10-25",value:55},{date:"10-26",value:59},{date:"10-27",value:60},
+    {date:"10-28",value:61},{date:"10-29",value:59},{date:"10-30",value:61}
+  ],
+  sleepTrend: [
+    {date:"10-22",score:76,hours:6.57},{date:"10-23",score:61,hours:5.38},{date:"10-24",score:80,hours:7.35},
+    {date:"10-25",score:83,hours:7.10},{date:"10-26",score:56,hours:4.73},{date:"10-27",score:77,hours:7.43},
+    {date:"10-28",score:74,hours:5.98},{date:"10-29",score:63,hours:5.95},{date:"10-30",score:64,hours:6.47}
+  ],
+  weekVolume: [
+    {week:"9/8",km:12.7},{week:"9/15",km:27.1},{week:"9/22",km:26.0},{week:"9/29",km:28.8},
+    {week:"10/6",km:30.0},{week:"10/13",km:8.8},{week:"10/20",km:65.2},{week:"10/27",km:0}
+  ],
+  weekPlan: [
+    {day:"周一", title:"完全休息", done:true, note:"✓"},
+    {day:"周二", title:"休息散步", done:true, note:"✓"},
+    {day:"周三", title:"可选游泳", done:false, note:"生病取消"},
+    {day:"周四", title:"试跑3-4K", done:false, note:"生病冻结"},
+    {day:"周五", title:"今日·休养", done:null, note:"防蚊+早睡", today:true},
+    {day:"周六", title:"休息/筋膜刀", done:null, note:"看心率"},
+    {day:"周日", title:"足球", done:null, note:"大概率取消"}
+  ],
+  nextRace: { name:"深圳马拉松（待抽签）", date:"2026-12-06", daysLeft: 37, note:"定位：超级LSD · 心率≤150 全程 · 补给演练" },
+  recentRuns: [
+    {date:"10-25", name:"成都马拉松 · 破四 3:59:23", km:42.62, pace:"5'37\"", hr:171},
+    {date:"10-21", name:"比赛周 5K+M唤醒", km:7.06, pace:"6'53\"", hr:144},
+    {date:"10-19", name:"最后长课 15K", km:15.48, pace:"6'50\"", hr:151},
+    {date:"10-14", name:"轻松跑 8K", km:8.81, pace:"6'22\"", hr:144},
+    {date:"10-11", name:"模拟赛 29K（实跑25K）", km:25.01, pace:"6'50\"", hr:157}
+  ],
+  coachNote: "教练：体温正常、嗓子缓解，往好的方向走。但静息心率 61 还在高位，别急——周日球不踢，今晚防蚊早睡，明早看心率定下周节奏。",
+  soccer: [
+    {date:"10-11", pos:"中后卫", min:71, m:5349, hs:757, sprints:32, top:7.35},
+    {date:"10-10", pos:"后腰", min:36, m:3418, hs:408, sprints:17, top:6.9},
+    {date:"09-27", pos:"中场", min:88, m:8126, hs:1192, sprints:44, top:null},
+    {date:"09-26", pos:"中场", min:85, m:7126, hs:null, sprints:39, top:7.42},
+    {date:"09-20", pos:"后腰", min:84, m:7989, hs:1205, sprints:49, top:7.12},
+    {date:"09-13", pos:"7-9人制", min:90, m:6455, hs:645, sprints:35, top:null},
+    {date:"09-12", pos:"11人制", min:69, m:6529, hs:838, sprints:35, top:6.56},
+    {date:"08-30", pos:"—", min:80, m:7607, hs:1050, sprints:42, top:null},
+    {date:"08-29", pos:"—", min:68, m:6175, hs:774, sprints:32, top:null}
+  ],
+  bodyComp: {
+    date: "2026-08-16",
+    src: "康文署体测",
+    items: [
+      {l:"体脂率", v:"16.9", u:"%", s:"标准区间", max:25},
+      {l:"骨骼肌 SMM", v:"30.9", u:"kg", s:"不错", max:35},
+      {l:"BMI", v:"23.7", u:"", s:"标准", max:28},
+      {l:"内脏脂肪", v:"4.0", u:"", s:"标准", max:10},
+      {l:"基础代谢", v:"1843", u:"kcal", s:"", max:2000},
+      {l:"健康得分", v:"85", u:"", s:"标准肌肉型", max:100}
+    ],
+    note: "短板：肌肉量 44.7kg（建议 45.1）· 腿部肌肉指数仅同龄人平均线 → 冬训下肢力量课重点观察，春季复测对比"
+  },
+  load: { ctl: 2.6, atl: 2.3, tsb: 0.3, tsbTrend: [
+    {w:"9/8",v:-0.9},{w:"9/15",v:-2.1},{w:"9/22",v:-2.2},{w:"9/29",v:-2.2},
+    {w:"10/6",v:-2.0},{w:"10/13",v:-0.3},{w:"10/20",v:-3.8},{w:"10/27",v:0.3}
+  ]},
+  coachAvatar: "data:image/jpeg;base64,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"
+};
+
+function render(d){
+  document.getElementById('updated').textContent = 'SYNC ' + (d.updatedAt || '');
+  const chip = document.getElementById('statusChip');
+  const chipTxt = d.statusLevel === 'alert' ? 'FREEZE' : d.statusLevel === 'warn' ? 'WATCH' : 'GO';
+  chip.innerHTML = '<span class="pulse"></span>' + chipTxt;
+  chip.className = 'chip chip--' + (d.statusLevel || 'ok');
+  document.getElementById('statusText').textContent = d.status || '';
+
+  const m = d.metrics || {};
+  const rhr = m.restingHR || {};
+  const vo2 = m.vo2max || {};
+  const deltaTxt = rhr.delta > 0 ? `<div class="sub up">▲ 基线 +${rhr.delta}</div>` : rhr.delta < 0 ? `<div class="sub down">▼ 基线 ${rhr.delta}</div>` : `<div class="sub">与基线持平</div>`;
+  const steps = m.stepsAvg ? (m.stepsAvg/1000).toFixed(1) : '—';
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric"><div class="label">❤️ 静息心率 RHR</div><div class="value">${rhr.today ?? '—'}</div><div class="sub">基线 ${rhr.baseline ?? '—'}</div>${deltaTxt}</div>
+    <div class="metric"><div class="label">😴 睡眠分 SLEEP</div><div class="value">${m.sleep?.score ?? '—'}</div><div class="sub">${m.sleep?.hours ?? '—'} 小时</div></div>
+    <div class="metric"><div class="label">🫁 摄氧量 VO2MAX</div><div class="value">${vo2.value ?? '—'}</div><div class="sub">${vo2.date ? vo2.date + ' 实测' : '最近跑步记录'}</div></div>
+    <div class="metric"><div class="label">👟 本周跑量 WEEK</div><div class="value">${m.weekKm ?? 0}<span class="unit"> km</span></div><div class="sub">恢复周 · 计划内</div></div>
+    <div class="metric"><div class="label">🚶 日均步数 STEPS</div><div class="value">${steps}<span class="unit"> k</span></div><div class="sub">10日均值 · 剔比赛日</div></div>`;
+
+  // ---- generic line/area chart ----
+  function drawLines(svgId, cfg){
+    const svg = document.getElementById(svgId); if(!svg) return;
+    const W=cfg.W||640, H=cfg.H||150;
+    const pl=cfg.pl??34, pr=cfg.pr??(cfg.series.some(s=>s.axis==='r')?40:14), pb=cfg.pb??26, pt=cfg.pt??20;
+    const labels=cfg.labels||[], n=labels.length;
+    if(!n){ svg.innerHTML=''; return; }
+    const x=i=>pl+i*(W-pl-pr)/Math.max(1,n-1);
+    const lSer=cfg.series.filter(s=>s.axis!=='r'), rSer=cfg.series.filter(s=>s.axis==='r');
+    let lvs=lSer.flatMap(s=>s.values.filter(v=>v!=null));
+    (cfg.hlines||[]).filter(h=>h.axis!=='r').forEach(h=>lvs.push(h.v));
+    let l0=cfg.lmin!=null?cfg.lmin:Math.min(...lvs)-(cfg.padMin??2), l1=cfg.lmax!=null?cfg.lmax:Math.max(...lvs)+(cfg.padMax??2);
+    if(l1===l0) l1=l0+1;
+    const yL=v=>pt+(l1-v)*(H-pt-pb)/(l1-l0);
+    let yR=null;
+    if(rSer.length){
+      let rvs=rSer.flatMap(s=>s.values.filter(v=>v!=null));
+      let r0=cfg.rmin!=null?cfg.rmin:Math.min(...rvs)-(cfg.rPadMin??1), r1=cfg.rmax!=null?cfg.rmax:Math.max(...rvs)+(cfg.rPadMax??1);
+      if(r1===r0) r1=r0+1;
+      yR=v=>pt+(r1-v)*(H-pt-pb)/(r1-r0);
+    }
+    // defs: per-series gradient fill + glow filter
+    let defs='';
+    cfg.series.forEach((s,si)=>{
+      if(s.fill) defs+=`<linearGradient id="g${svgId}${si}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${s.color}" stop-opacity="0.38"/><stop offset="100%" stop-color="${s.color}" stop-opacity="0.02"/></linearGradient>`;
+      defs+=`<filter id="f${svgId}${si}" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="${s.color}" flood-opacity="0.55"/></filter>`;
+    });
+    let out=`<defs>${defs}</defs>`;
+    for(let g=0;g<4;g++){
+      const gy=pt+g*(H-pt-pb)/3, val=l1-g*(l1-l0)/3;
+      out+=`<line class="gridln" x1="${pl}" y1="${gy}" x2="${W-pr}" y2="${gy}"/>`;
+      out+=`<text x="${pl-4}" y="${gy+3}" font-size="8.5" text-anchor="end" fill="#475569">${Math.round(val)}</text>`;
+    }
+    // vertical guides tie every data point to its label column
+    for(let i=0;i<n;i++){
+      out+=`<line x1="${x(i).toFixed(1)}" y1="${pt}" x2="${x(i).toFixed(1)}" y2="${H-pb}" stroke="rgba(148,163,184,0.07)" stroke-width="1"/>`;
+    }
+    (cfg.hlines||[]).forEach(h=>{
+      const y=h.axis==='r'&&yR?yR(h.v):yL(h.v);
+      out+=`<line x1="${pl}" y1="${y}" x2="${W-pr}" y2="${y}" stroke="${h.color}" stroke-dasharray="4 3" stroke-width="1"/>`;
+      if(h.label) out+=`<text x="${W-pr+4}" y="${y+3}" font-size="8.5" fill="${h.color}">${h.label}</text>`;
+    });
+    cfg.series.forEach((s,si)=>{
+      const y=s.axis==='r'?yR:yL;
+      const pts=s.values.map((v,i)=>v==null?null:[x(i),y(v),v]);
+      if(s.fill){
+        let seg=[];
+        const flush=()=>{ if(seg.length>1){ const p=seg.map((q,j)=>(j?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' ');
+          out+=`<path d="${p} L ${seg[seg.length-1][0].toFixed(1)} ${H-pb} L ${seg[0][0].toFixed(1)} ${H-pb} Z" fill="url(#g${svgId}${si})"/>`; } seg=[]; };
+        pts.forEach(p=>{ if(p) seg.push(p); else flush(); }); flush();
+      }
+      let seg=[];
+      const flushL=()=>{ if(seg.length>1){ out+=`<polyline points="${seg.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' ')}" fill="none" stroke="${s.color}" stroke-width="${s.w||2}" ${s.dash?'stroke-dasharray="5 3"':''} stroke-linejoin="round" stroke-linecap="round" filter="url(#f${svgId}${si})"/>`; } seg=[]; };
+      pts.forEach(p=>{ if(p) seg.push(p); else flushL(); }); flushL();
+      let lastIdx=-1; pts.forEach((p,i)=>{ if(p) lastIdx=i; });
+      pts.forEach((p,i)=>{
+        if(!p) return;
+        if(i===lastIdx) out+=`<circle cx="${p[0]}" cy="${p[1]}" r="6" fill="none" stroke="${s.color}" stroke-width="1" opacity="0.45"/>`;
+        out+=`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${s.color}" stroke="#0b1220" stroke-width="1.2" filter="url(#f${svgId}${si})"/>`;
+        if(s.dotLabel){
+          const txt=s.labelFmt?s.labelFmt(p[2]):p[2];
+          const dy=(s.labelBelow?13:-8);
+          out+=`<text x="${p[0]}" y="${p[1]+dy}" font-size="9" font-weight="600" text-anchor="middle" fill="${s.color}">${txt}</text>`;
+        }
+      });
+    });
+    const rows = cfg.xRows || [{labels: labels}];
+    rows.forEach((row, ri)=>{
+      const yy = H - 5 - (rows.length-1-ri)*12;
+      if(row.name) out+=`<text x="${pl-4}" y="${yy}" font-size="8" text-anchor="end" fill="${row.color||'#64748b'}" opacity="0.75">${row.name}</text>`;
+      (row.labels||[]).forEach((lb,i)=>{
+        out+=`<text x="${x(i)}" y="${yy}" font-size="9" text-anchor="middle" fill="${row.color||'#64748b'}">${lb}</text>`;
+      });
+    });
+    svg.innerHTML=out;
+  }
+
+  // ---- donut chart ----
+  function drawDonut(svgId, cfg){
+    const svg = document.getElementById(svgId); if(!svg) return;
+    const W=cfg.W||170, H=cfg.H||170, cx=W/2, cy=H/2, R=cfg.R??(H/2-10), r=cfg.r??(R*0.64);
+    const items=(cfg.items||[]).filter(it=>it.value>0);
+    const tot=items.reduce((a,b)=>a+b.value,0);
+    if(!tot){ svg.innerHTML=''; return; }
+    let a0=-Math.PI/2, out='';
+    const P=(rad,a)=>[cx+rad*Math.cos(a), cy+rad*Math.sin(a)];
+    items.forEach((it,i)=>{
+      const a1=a0+it.value/tot*Math.PI*2;
+      if(items.length===1){
+        out+=`<circle cx="${cx}" cy="${cy}" r="${(R+r)/2}" fill="none" stroke="${it.color}" stroke-width="${R-r}"/>`;
+      } else {
+        const gap=0.03, s=a0+gap/2, e=a1-gap/2, large=(e-s)>Math.PI?1:0;
+        const [x0,y0]=P(R,s), [x1,y1]=P(R,e), [xi1,yi1]=P(r,e), [xi0,yi0]=P(r,s);
+        out+=`<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${R} ${R} 0 ${large} 1 ${x1.toFixed(1)} ${y1.toFixed(1)} L${xi1.toFixed(1)} ${yi1.toFixed(1)} A${r} ${r} 0 ${large} 0 ${xi0.toFixed(1)} ${yi0.toFixed(1)} Z" fill="${it.color}" opacity="0.92"/>`;
+      }
+      a0=a1;
+    });
+    out+=`<text x="${cx}" y="${cy-3}" font-size="21" font-weight="600" text-anchor="middle" fill="#e2e8f0">${cfg.centerMain||''}</text>`;
+    out+=`<text x="${cx}" y="${cy+14}" font-size="9.5" text-anchor="middle" fill="#64748b">${cfg.centerSub||''}</text>`;
+    svg.innerHTML=out;
+  }
+
+  // RHR
+  drawLines('rhrChart', {
+    W:320, H:130, pl:28, pb:20, pt:16,
+    labels: (d.rhrTrend||[]).map(p=>p.date.slice(3)),
+    series: [{ values:(d.rhrTrend||[]).map(p=>p.value), color:'#38bdf8', fill:true, dotLabel:true }],
+    hlines: [ {v:57, color:'#f87171'}, {v:55, color:'#475569', label:'基线'} ],
+    padMin: 2, padMax: 2
+  });
+
+  // Sleep: hours area + score line (right axis 0-100)
+  drawLines('sleepChart', {
+    W:320, H:130, pl:24, pb:20, pt:16,
+    labels: (d.sleepTrend||[]).map(p=>p.date.slice(3)),
+    series: [
+      { values:(d.sleepTrend||[]).map(p=>p.hours), color:'#38bdf8', fill:true, dotLabel:true, labelFmt:v=>v.toFixed(1) },
+      { values:(d.sleepTrend||[]).map(p=>p.score), color:'#a78bfa', axis:'r' }
+    ],
+    hlines: [ {v:7.5, color:'#475569', label:'7.5h'} ],
+    lmin: 0, lmax: 10, rmin: 30, rmax: 100
+  });
+
+  // Weekly volume
+  const wv = d.weekVolume || [];
+  drawLines('weekChart', {
+    W:640, H:120, pl:30, pb:20, pt:18,
+    labels: wv.map(p=>p.week),
+    series: [{ values: wv.map(p=>p.km), color:'#34d399', fill:true, dotLabel:true }],
+    hlines: [ {v:34, color:'#475569', label:'冬训目标 30-38K'} ],
+    padMin: 4, padMax: 8
+  });
+  document.getElementById('weekHint').textContent = '峰值 65K = 成马比赛周 · 虚线 = 冬训目标周跑量区间下沿';
+
+  // Training load: CTL / ATL / TSB + form gauge + TSB trend
+  const ld = d.load || {};
+  const loadPanel = document.getElementById('loadPanel');
+  if (ld.ctl != null){
+    loadPanel.style.display = '';
+    document.getElementById('ctlV').textContent = (ld.ctl*7).toFixed(0)+'K';
+    document.getElementById('atlV').textContent = (ld.atl*7).toFixed(0)+'K';
+    const tsb = ld.tsb;
+    const tsbEl = document.getElementById('tsbV');
+    tsbEl.textContent = (tsb>0?'+':'')+tsb.toFixed(1);
+    tsbEl.style.color = tsb>1 ? '#38bdf8' : tsb>0 ? '#34d399' : tsb>-2 ? '#fbbf24' : '#f87171';
+    document.getElementById('tsbS').textContent = tsb>1 ? '清新 · 可比赛' : tsb>0 ? '恢复到位' : tsb>-2 ? '训练态' : '疲劳偏高';
+    const pct = Math.max(0, Math.min(100, (tsb+6)/10*100));
+    document.getElementById('tsbMark').style.left = pct+'%';
+    const tr = ld.tsbTrend || [];
+    drawLines('tsbChart', {
+      W:640, H:90, pl:26, pb:18, pt:14,
+      labels: tr.map(p=>p.w),
+      series: [{ values: tr.map(p=>p.v), color:'#22d3ee', fill:true, dotLabel:true, labelFmt:v=>(v>0?'+':'')+v }],
+      hlines: [ {v:0, color:'#475569'} ],
+      padMin: 1, padMax: 1
+    });
+  } else { loadPanel.style.display = 'none'; }
+
+  // Week plan
+  document.getElementById('plan').innerHTML = (d.weekPlan||[]).map(p=>{
+    const dot = p.done===true ? 'dot--done' : p.done===false ? 'dot--skip' : 'dot--todo';
+    return `<div class="day${p.today?' today':''}"><div class="dow">${p.day}</div><div class="t">${p.title}</div><div class="n">${p.note||''}</div><span class="dot ${dot}"></span></div>`;
+  }).join('');
+
+  const r = d.nextRace || {};
+  document.getElementById('race').innerHTML = r.name ? `<span class="name">${r.name}</span><span class="count">${r.daysLeft ?? '—'}<span class="unit"> 天后</span></span><span class="date">${r.date||''}</span><span class="note">${r.note||''}</span>` : '—';
+
+  // Recent runs: donut of km share + legend (date / km / pace / HR)
+  const runs = (d.recentRuns||[]).slice().reverse();
+  const runColors = ['#34d399','#22d3ee','#a78bfa','#fbbf24','#f87171','#38bdf8'];
+  const totKm = runs.reduce((a,r)=>a+r.km,0);
+  drawDonut('runDonut', {
+    W:170, H:170, R:78, r:50,
+    items: runs.map((r,i)=>({ value:r.km, color:runColors[i%runColors.length] })),
+    centerMain: totKm.toFixed(0)+'K', centerSub: '近'+runs.length+'次合计'
+  });
+  document.getElementById('runLegend').innerHTML = runs.map((r,i)=>
+    `<div class="li"><span class="sw" style="background:${runColors[i%runColors.length]};box-shadow:0 0 6px ${runColors[i%runColors.length]}"></span><b>${r.date}</b> ${r.km}K<span class="r">${r.pace} · ♥${r.hr}</span></div>`
+  ).join('');
+  drawLines('runChart', {
+    W:640, H:155, pl:44, pb:48, pt:22, pr:14,
+    labels: runs.map(r=>r.date),
+    xRows: [
+      { name:'日期', labels: runs.map(r=>r.date), color:'#cbd5e1' },
+      { name:'配速', labels: runs.map(r=>r.pace), color:'#94a3b8' },
+      { name:'心率', labels: runs.map(r=>String(r.hr)), color:'#f87171' }
+    ],
+    series: [
+      { values: runs.map(r=>r.km), color:'#34d399', fill:true, dotLabel:true, labelFmt:v=>v+'K' }
+    ],
+    padMin: 3, padMax: 8
+  });
+
+  // Soccer: donut of intensity split + legend (recent 3 matches detail)
+  const soc = (d.soccer||[]);
+  const socPanel = document.getElementById('soccerPanel');
+  if (soc.length){
+    socPanel.style.display = '';
+    const totM = soc.reduce((a,s)=>a+s.m,0);
+    const totHs = soc.reduce((a,s)=>a+(s.hs||0),0);
+    const totSpr = soc.reduce((a,s)=>a+s.sprints,0);
+    const topAll = Math.max(...soc.map(s=>s.top||0));
+    drawDonut('socDonut', {
+      W:170, H:170, R:78, r:50,
+      items: [
+        { value: totHs, color:'#a78bfa' },
+        { value: totM-totHs, color:'#38bdf8' }
+      ],
+      centerMain: (totM/1000).toFixed(1)+'K', centerSub: soc.length+'场总跑动'
+    });
+    document.getElementById('socLegend').innerHTML =
+      `<div class="li"><span class="sw" style="background:#a78bfa;box-shadow:0 0 6px #a78bfa"></span><b>高强度跑</b><span class="r">${(totHs/1000).toFixed(1)}K · ${Math.round(totHs/totM*100)}%</span></div>` +
+      `<div class="li"><span class="sw" style="background:#38bdf8;box-shadow:0 0 6px #38bdf8"></span><b>中低强度</b><span class="r">${((totM-totHs)/1000).toFixed(1)}K</span></div>` +
+      soc.slice(0,3).map(s=>
+        `<div class="li"><span class="sw" style="background:#334155"></span><b>${s.date}</b> ${(s.m/1000).toFixed(1)}K<span class="r">${s.sprints}冲 · 极速${s.top!=null?s.top.toFixed(2):'—'}</span></div>`
+      ).join('');
+    const socChrono = soc.slice().reverse();
+    drawLines('soccerChart', {
+      W:640, H:175, pl:44, pb:48, pt:22, pr:14,
+      labels: socChrono.map(s=>s.date),
+      xRows: [
+        { name:'日期', labels: socChrono.map(s=>s.date), color:'#cbd5e1' },
+        { name:'冲刺', labels: socChrono.map(s=>s.sprints+'冲'), color:'#94a3b8' },
+        { name:'极速', labels: socChrono.map(s=>s.top!=null?s.top.toFixed(2):'—'), color:'#fbbf24' }
+      ],
+      series: [
+        { values: socChrono.map(s=>s.m), color:'#38bdf8', fill:true, dotLabel:true, labelFmt:v=>(v/1000).toFixed(1)+'K' },
+        { values: socChrono.map(s=>s.hs), color:'#a78bfa', dotLabel:true, labelBelow:true, labelFmt:v=>v+'m' }
+      ],
+      padMin: 600, padMax: 1200
+    });
+    document.getElementById('soccerSum').innerHTML =
+      `共 <b>${soc.length}</b> 场 · 场均 <b>${(totM/soc.length/1000).toFixed(1)}K</b> · 冲刺合计 <b>${totSpr}</b> 次 · 极速纪录 <b>${topAll.toFixed(2)} m/s</b> · 数据来自赛后截图，教练手工录入`;
+  } else { socPanel.style.display = 'none'; }
+
+  // Body composition
+  const bc = d.bodyComp || {};
+  const bcEl = document.getElementById('bodyComp');
+  if (bc.items && bc.items.length){
+    bcEl.innerHTML = bc.items.map(it=>{
+      const pct = it.max ? Math.min(100, Math.round(parseFloat(it.v)/it.max*100)) : 0;
+      return `<div class="cell"><div class="l">${it.l}</div><div class="v">${it.v}<span class="unit"> ${it.u||''}</span></div><div style="height:4px;border-radius:2px;background:rgba(148,163,184,0.15);margin-top:4px;"><div style="height:4px;border-radius:2px;width:${pct}%;background:linear-gradient(90deg,#22d3ee,#34d399);"></div></div><div class="s">${it.s||''}</div></div>`;
+    }).join('');
+    document.getElementById('bodyNote').textContent = (bc.date||'') + ' · ' + (bc.src||'') + (bc.note ? ' — ' + bc.note : '');
+  } else { bcEl.innerHTML = ''; document.getElementById('bodyNote').textContent = ''; }
+
+  document.getElementById('coach').textContent = '🧢 ' + (d.coachNote || '');
+  const av = document.getElementById('coachAvatar');
+  if (d.coachAvatar){ av.src = d.coachAvatar; av.style.display = ''; av.onerror = ()=>{ av.style.display='none'; }; }
+}
+
+render(SAMPLE);
+</script>
+</body>
+</html>
