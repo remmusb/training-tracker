@@ -125,6 +125,24 @@
   .soc-sum b { color: var(--cyan); font-weight: 600; }
   td.rec, th.rec { text-align: right; }
   .toprec { color: var(--amber); }
+  .donutwrap { display: flex; gap: 16px; align-items: center; }
+  .legend { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .legend .li { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--txt2); font-variant-numeric: tabular-nums; }
+  .legend .sw { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+  .legend .li b { color: var(--txt); font-weight: 600; }
+  .legend .li .r { margin-left: auto; color: var(--txt3); }
+  .loadrow { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; margin-block-end: 6px; }
+  .lcell { border: 1px solid var(--line2); border-radius: 8px; padding: 6px 12px; background: rgba(15,23,41,0.55); }
+  .lcell .l { font-size: 10px; color: var(--txt3); letter-spacing: 0.5px; }
+  .lcell .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; margin-block-start: 2px; }
+  .lcell .s { font-size: 10px; color: var(--txt3); }
+  .gaugewrap { flex: 1; min-width: 220px; align-self: center; padding: 0 4px; }
+  .gauge { position: relative; height: 14px; border-radius: 7px; opacity: 0.9;
+    background: linear-gradient(90deg, #f87171 0%, #fbbf24 35%, #34d399 50%, #38bdf8 75%); }
+  .gauge .mark { position: absolute; top: -4px; width: 4px; height: 22px; background: #e2e8f0; border-radius: 2px; box-shadow: 0 0 6px rgba(255,255,255,.8); transform: translateX(-2px); }
+  .gaugetags { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--txt3); margin-block-start: 4px; }
+  .coach { display: flex; gap: 12px; align-items: center; }
+  .coach-avatar { width: 56px; height: 56px; border-radius: 50%; flex: none; border: 2px solid var(--cyan); box-shadow: 0 0 10px rgba(34,211,238,.4); object-fit: cover; }
   @media (max-width: 640px) {
     .metrics { grid-template-columns: repeat(2, 1fr); }
     .charts { grid-template-columns: 1fr; }
@@ -136,7 +154,7 @@
 <body>
 <div class="wrap">
   <div class="head">
-    <div class="title">TRAINING <b>HUD</b> · 身体状态与训练大屏</div>
+    <div class="title">⚡ TRAINING <b>HUD</b> · 身体状态与训练大屏</div>
     <div class="updated" id="updated"></div>
   </div>
   <div class="statusline"><span class="chip" id="statusChip"></span><span class="status-text" id="statusText"></span></div>
@@ -145,12 +163,12 @@
 
   <div class="charts">
     <div class="panel">
-      <h2>静息心率 · 基线 55</h2>
+      <h2>❤️ 静息心率 · 基线 55</h2>
       <svg id="rhrChart" width="100%" height="130" viewBox="0 0 320 130" preserveAspectRatio="none"></svg>
       <div class="hint">红色虚线 = 57 复跑门槛 · 灰虚线 = 基线 55</div>
     </div>
     <div class="panel">
-      <h2>睡眠 · 时长 / 分数</h2>
+      <h2>😴 睡眠 · 时长 / 分数</h2>
       <svg id="sleepChart" width="100%" height="130" viewBox="0 0 320 130" preserveAspectRatio="none"></svg>
       <div class="hint">蓝线 = 时长 h · 紫线 = 睡眠分（右轴）· 灰虚线 = 7.5h 目标</div>
     </div>
@@ -158,36 +176,61 @@
 
   <div class="charts full">
     <div class="panel">
-      <h2>周跑量 · km</h2>
+      <h2>📈 周跑量 · km</h2>
       <svg id="weekChart" width="100%" height="120" viewBox="0 0 640 120" preserveAspectRatio="none"></svg>
       <div class="hint" id="weekHint"></div>
     </div>
   </div>
 
-  <div class="section">本周课表</div>
-  <div class="plan" id="plan"></div>
-
-  <div class="section">下一场</div>
-  <div class="race" id="race"></div>
-
-  <div class="section">最近跑步</div>
-  <div class="panel">
-    <svg id="runChart" width="100%" height="155" viewBox="0 0 640 155" preserveAspectRatio="none"></svg>
-    <div class="hint">绿线 = 距离 km · 下方三行 = 日期 / 配速 / 均心率</div>
+  <div class="charts full" id="loadPanel" style="display:none">
+    <div class="panel">
+      <h2>🔋 训练负荷 · CTL / ATL / TSB</h2>
+      <div class="loadrow">
+        <div class="lcell"><div class="l">体能 CTL</div><div class="v" id="ctlV" style="color:var(--blue)">—</div><div class="s">长期负荷 · km当量/周</div></div>
+        <div class="lcell"><div class="l">疲劳 ATL</div><div class="v" id="atlV" style="color:var(--amber)">—</div><div class="s">短期负荷 · km当量/周</div></div>
+        <div class="lcell"><div class="l">状态 TSB</div><div class="v" id="tsbV">—</div><div class="s" id="tsbS">—</div></div>
+        <div class="gaugewrap">
+          <div class="gauge"><div class="mark" id="tsbMark" style="left:50%"></div></div>
+          <div class="gaugetags"><span>过度疲劳</span><span>最佳竞技</span><span>状态清新</span></div>
+        </div>
+      </div>
+      <svg id="tsbChart" width="100%" height="90" viewBox="0 0 640 90" preserveAspectRatio="none"></svg>
+      <div class="hint">TSB &gt; 0 = 体能超过疲劳（适合比赛/上强度）· TSB &lt; 0 = 疲劳积累（正常训练态）· 按跑量当量估算</div>
+    </div>
   </div>
 
-  <div class="section">足球 · 神仙球背心数据</div>
+  <div class="section">📅 本周课表</div>
+  <div class="plan" id="plan"></div>
+
+  <div class="section">🏁 下一场</div>
+  <div class="race" id="race"></div>
+
+  <div class="section">🏃 最近跑步</div>
+  <div class="panel">
+    <div class="donutwrap">
+      <svg id="runDonut" width="170" height="170" viewBox="0 0 170 170"></svg>
+      <div class="legend" id="runLegend"></div>
+    </div>
+    <svg id="runChart" width="100%" height="155" viewBox="0 0 640 155" preserveAspectRatio="none" style="margin-top:6px"></svg>
+    <div class="hint">圆环 = 近 5 次跑量占比 · 绿线 = 距离趋势 · 下方三行 = 日期 / 配速 / 均心率</div>
+  </div>
+
+  <div class="section">⚽ 足球 · 神仙球背心数据</div>
   <div class="panel" id="soccerPanel">
-    <svg id="soccerChart" width="100%" height="175" viewBox="0 0 640 175" preserveAspectRatio="none"></svg>
-    <div class="hint">蓝线 = 总跑动 · 紫线 = 高强度跑 m · 下方三行 = 日期 / 冲刺 / 极速 m/s</div>
+    <div class="donutwrap">
+      <svg id="socDonut" width="170" height="170" viewBox="0 0 170 170"></svg>
+      <div class="legend" id="socLegend"></div>
+    </div>
+    <svg id="soccerChart" width="100%" height="175" viewBox="0 0 640 175" preserveAspectRatio="none" style="margin-top:6px"></svg>
+    <div class="hint">圆环 = 强度构成 · 蓝线 = 总跑动 · 紫线 = 高强度跑 · 下方三行 = 日期 / 冲刺 / 极速</div>
     <div class="soc-sum" id="soccerSum"></div>
   </div>
 
-  <div class="section">体质档案</div>
+  <div class="section">🧬 体质档案</div>
   <div class="bc" id="bodyComp"></div>
   <div class="soc-sum" id="bodyNote"></div>
 
-  <div class="coach" id="coach"></div>
+  <div class="coach"><img class="coach-avatar" id="coachAvatar" src="" alt="" style="display:none"><span id="coach"></span></div>
   <div class="foot">DATA: GARMIN CONNECT · PLAN: training-tracker 冬训版 · AUTO-UPDATED DAILY · SOCCER/BODY: COACH MAINTAINED</div>
 </div>
 
@@ -252,7 +295,12 @@ const SAMPLE = {
       {l:"健康得分", v:"85", u:"", s:"标准肌肉型", max:100}
     ],
     note: "短板：肌肉量 44.7kg（建议 45.1）· 腿部肌肉指数仅同龄人平均线 → 冬训下肢力量课重点观察，春季复测对比"
-  }
+  },
+  load: { ctl: 2.6, atl: 2.3, tsb: 0.3, tsbTrend: [
+    {w:"9/8",v:-0.9},{w:"9/15",v:-2.1},{w:"9/22",v:-2.2},{w:"9/29",v:-2.2},
+    {w:"10/6",v:-2.0},{w:"10/13",v:-0.3},{w:"10/20",v:-3.8},{w:"10/27",v:0.3}
+  ]},
+  coachAvatar: "COACH_AVATAR_DATA_URI"
 };
 
 function render(d){
@@ -269,11 +317,11 @@ function render(d){
   const deltaTxt = rhr.delta > 0 ? `<div class="sub up">▲ 基线 +${rhr.delta}</div>` : rhr.delta < 0 ? `<div class="sub down">▼ 基线 ${rhr.delta}</div>` : `<div class="sub">与基线持平</div>`;
   const steps = m.stepsAvg ? (m.stepsAvg/1000).toFixed(1) : '—';
   document.getElementById('metrics').innerHTML = `
-    <div class="metric"><div class="label">静息心率 RHR</div><div class="value">${rhr.today ?? '—'}</div><div class="sub">基线 ${rhr.baseline ?? '—'}</div>${deltaTxt}</div>
-    <div class="metric"><div class="label">睡眠分 SLEEP</div><div class="value">${m.sleep?.score ?? '—'}</div><div class="sub">${m.sleep?.hours ?? '—'} 小时</div></div>
-    <div class="metric"><div class="label">摄氧量 VO2MAX</div><div class="value">${vo2.value ?? '—'}</div><div class="sub">${vo2.date ? vo2.date + ' 实测' : '最近跑步记录'}</div></div>
-    <div class="metric"><div class="label">本周跑量 WEEK</div><div class="value">${m.weekKm ?? 0}<span class="unit"> km</span></div><div class="sub">恢复周 · 计划内</div></div>
-    <div class="metric"><div class="label">日均步数 STEPS</div><div class="value">${steps}<span class="unit"> k</span></div><div class="sub">10日均值 · 剔比赛日</div></div>`;
+    <div class="metric"><div class="label">❤️ 静息心率 RHR</div><div class="value">${rhr.today ?? '—'}</div><div class="sub">基线 ${rhr.baseline ?? '—'}</div>${deltaTxt}</div>
+    <div class="metric"><div class="label">😴 睡眠分 SLEEP</div><div class="value">${m.sleep?.score ?? '—'}</div><div class="sub">${m.sleep?.hours ?? '—'} 小时</div></div>
+    <div class="metric"><div class="label">🫁 摄氧量 VO2MAX</div><div class="value">${vo2.value ?? '—'}</div><div class="sub">${vo2.date ? vo2.date + ' 实测' : '最近跑步记录'}</div></div>
+    <div class="metric"><div class="label">👟 本周跑量 WEEK</div><div class="value">${m.weekKm ?? 0}<span class="unit"> km</span></div><div class="sub">恢复周 · 计划内</div></div>
+    <div class="metric"><div class="label">🚶 日均步数 STEPS</div><div class="value">${steps}<span class="unit"> k</span></div><div class="sub">10日均值 · 剔比赛日</div></div>`;
 
   // ---- generic line/area chart ----
   function drawLines(svgId, cfg){
@@ -352,6 +400,31 @@ function render(d){
     svg.innerHTML=out;
   }
 
+  // ---- donut chart ----
+  function drawDonut(svgId, cfg){
+    const svg = document.getElementById(svgId); if(!svg) return;
+    const W=cfg.W||170, H=cfg.H||170, cx=W/2, cy=H/2, R=cfg.R??(H/2-10), r=cfg.r??(R*0.64);
+    const items=(cfg.items||[]).filter(it=>it.value>0);
+    const tot=items.reduce((a,b)=>a+b.value,0);
+    if(!tot){ svg.innerHTML=''; return; }
+    let a0=-Math.PI/2, out='';
+    const P=(rad,a)=>[cx+rad*Math.cos(a), cy+rad*Math.sin(a)];
+    items.forEach((it,i)=>{
+      const a1=a0+it.value/tot*Math.PI*2;
+      if(items.length===1){
+        out+=`<circle cx="${cx}" cy="${cy}" r="${(R+r)/2}" fill="none" stroke="${it.color}" stroke-width="${R-r}"/>`;
+      } else {
+        const gap=0.03, s=a0+gap/2, e=a1-gap/2, large=(e-s)>Math.PI?1:0;
+        const [x0,y0]=P(R,s), [x1,y1]=P(R,e), [xi1,yi1]=P(r,e), [xi0,yi0]=P(r,s);
+        out+=`<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${R} ${R} 0 ${large} 1 ${x1.toFixed(1)} ${y1.toFixed(1)} L${xi1.toFixed(1)} ${yi1.toFixed(1)} A${r} ${r} 0 ${large} 0 ${xi0.toFixed(1)} ${yi0.toFixed(1)} Z" fill="${it.color}" opacity="0.92"/>`;
+      }
+      a0=a1;
+    });
+    out+=`<text x="${cx}" y="${cy-3}" font-size="21" font-weight="600" text-anchor="middle" fill="#e2e8f0">${cfg.centerMain||''}</text>`;
+    out+=`<text x="${cx}" y="${cy+14}" font-size="9.5" text-anchor="middle" fill="#64748b">${cfg.centerSub||''}</text>`;
+    svg.innerHTML=out;
+  }
+
   // RHR
   drawLines('rhrChart', {
     W:320, H:130, pl:28, pb:20, pt:16,
@@ -384,6 +457,30 @@ function render(d){
   });
   document.getElementById('weekHint').textContent = '峰值 65K = 成马比赛周 · 虚线 = 冬训目标周跑量区间下沿';
 
+  // Training load: CTL / ATL / TSB + form gauge + TSB trend
+  const ld = d.load || {};
+  const loadPanel = document.getElementById('loadPanel');
+  if (ld.ctl != null){
+    loadPanel.style.display = '';
+    document.getElementById('ctlV').textContent = (ld.ctl*7).toFixed(0)+'K';
+    document.getElementById('atlV').textContent = (ld.atl*7).toFixed(0)+'K';
+    const tsb = ld.tsb;
+    const tsbEl = document.getElementById('tsbV');
+    tsbEl.textContent = (tsb>0?'+':'')+tsb.toFixed(1);
+    tsbEl.style.color = tsb>1 ? '#38bdf8' : tsb>0 ? '#34d399' : tsb>-2 ? '#fbbf24' : '#f87171';
+    document.getElementById('tsbS').textContent = tsb>1 ? '清新 · 可比赛' : tsb>0 ? '恢复到位' : tsb>-2 ? '训练态' : '疲劳偏高';
+    const pct = Math.max(0, Math.min(100, (tsb+6)/10*100));
+    document.getElementById('tsbMark').style.left = pct+'%';
+    const tr = ld.tsbTrend || [];
+    drawLines('tsbChart', {
+      W:640, H:90, pl:26, pb:18, pt:14,
+      labels: tr.map(p=>p.w),
+      series: [{ values: tr.map(p=>p.v), color:'#22d3ee', fill:true, dotLabel:true, labelFmt:v=>(v>0?'+':'')+v }],
+      hlines: [ {v:0, color:'#475569'} ],
+      padMin: 1, padMax: 1
+    });
+  } else { loadPanel.style.display = 'none'; }
+
   // Week plan
   document.getElementById('plan').innerHTML = (d.weekPlan||[]).map(p=>{
     const dot = p.done===true ? 'dot--done' : p.done===false ? 'dot--skip' : 'dot--todo';
@@ -393,8 +490,18 @@ function render(d){
   const r = d.nextRace || {};
   document.getElementById('race').innerHTML = r.name ? `<span class="name">${r.name}</span><span class="count">${r.daysLeft ?? '—'}<span class="unit"> 天后</span></span><span class="date">${r.date||''}</span><span class="note">${r.note||''}</span>` : '—';
 
-  // Recent runs: single line (km) + 3 label rows below: date / pace / HR
+  // Recent runs: donut of km share + legend (date / km / pace / HR)
   const runs = (d.recentRuns||[]).slice().reverse();
+  const runColors = ['#34d399','#22d3ee','#a78bfa','#fbbf24','#f87171','#38bdf8'];
+  const totKm = runs.reduce((a,r)=>a+r.km,0);
+  drawDonut('runDonut', {
+    W:170, H:170, R:78, r:50,
+    items: runs.map((r,i)=>({ value:r.km, color:runColors[i%runColors.length] })),
+    centerMain: totKm.toFixed(0)+'K', centerSub: '近'+runs.length+'次合计'
+  });
+  document.getElementById('runLegend').innerHTML = runs.map((r,i)=>
+    `<div class="li"><span class="sw" style="background:${runColors[i%runColors.length]};box-shadow:0 0 6px ${runColors[i%runColors.length]}"></span><b>${r.date}</b> ${r.km}K<span class="r">${r.pace} · ♥${r.hr}</span></div>`
+  ).join('');
   drawLines('runChart', {
     W:640, H:155, pl:44, pb:48, pt:22, pr:14,
     labels: runs.map(r=>r.date),
@@ -409,28 +516,44 @@ function render(d){
     padMin: 3, padMax: 8
   });
 
-  // Soccer: distance area + high-intensity line, sprints/top-speed as label rows below
-  const soc = (d.soccer||[]).slice().reverse();
+  // Soccer: donut of intensity split + legend (recent 3 matches detail)
+  const soc = (d.soccer||[]);
   const socPanel = document.getElementById('soccerPanel');
   if (soc.length){
     socPanel.style.display = '';
+    const totM = soc.reduce((a,s)=>a+s.m,0);
+    const totHs = soc.reduce((a,s)=>a+(s.hs||0),0);
+    const totSpr = soc.reduce((a,s)=>a+s.sprints,0);
+    const topAll = Math.max(...soc.map(s=>s.top||0));
+    drawDonut('socDonut', {
+      W:170, H:170, R:78, r:50,
+      items: [
+        { value: totHs, color:'#a78bfa' },
+        { value: totM-totHs, color:'#38bdf8' }
+      ],
+      centerMain: (totM/1000).toFixed(1)+'K', centerSub: soc.length+'场总跑动'
+    });
+    document.getElementById('socLegend').innerHTML =
+      `<div class="li"><span class="sw" style="background:#a78bfa;box-shadow:0 0 6px #a78bfa"></span><b>高强度跑</b><span class="r">${(totHs/1000).toFixed(1)}K · ${Math.round(totHs/totM*100)}%</span></div>` +
+      `<div class="li"><span class="sw" style="background:#38bdf8;box-shadow:0 0 6px #38bdf8"></span><b>中低强度</b><span class="r">${((totM-totHs)/1000).toFixed(1)}K</span></div>` +
+      soc.slice(0,3).map(s=>
+        `<div class="li"><span class="sw" style="background:#334155"></span><b>${s.date}</b> ${(s.m/1000).toFixed(1)}K<span class="r">${s.sprints}冲 · 极速${s.top!=null?s.top.toFixed(2):'—'}</span></div>`
+      ).join('');
+    const socChrono = soc.slice().reverse();
     drawLines('soccerChart', {
       W:640, H:175, pl:44, pb:48, pt:22, pr:14,
-      labels: soc.map(s=>s.date),
+      labels: socChrono.map(s=>s.date),
       xRows: [
-        { name:'日期', labels: soc.map(s=>s.date), color:'#cbd5e1' },
-        { name:'冲刺', labels: soc.map(s=>s.sprints+'冲'), color:'#94a3b8' },
-        { name:'极速', labels: soc.map(s=>s.top!=null?s.top.toFixed(2):'—'), color:'#fbbf24' }
+        { name:'日期', labels: socChrono.map(s=>s.date), color:'#cbd5e1' },
+        { name:'冲刺', labels: socChrono.map(s=>s.sprints+'冲'), color:'#94a3b8' },
+        { name:'极速', labels: socChrono.map(s=>s.top!=null?s.top.toFixed(2):'—'), color:'#fbbf24' }
       ],
       series: [
-        { values: soc.map(s=>s.m), color:'#38bdf8', fill:true, dotLabel:true, labelFmt:v=>(v/1000).toFixed(1)+'K' },
-        { values: soc.map(s=>s.hs), color:'#a78bfa', dotLabel:true, labelBelow:true, labelFmt:v=>v+'m' }
+        { values: socChrono.map(s=>s.m), color:'#38bdf8', fill:true, dotLabel:true, labelFmt:v=>(v/1000).toFixed(1)+'K' },
+        { values: socChrono.map(s=>s.hs), color:'#a78bfa', dotLabel:true, labelBelow:true, labelFmt:v=>v+'m' }
       ],
       padMin: 600, padMax: 1200
     });
-    const totM = soc.reduce((a,s)=>a+s.m,0);
-    const totSpr = soc.reduce((a,s)=>a+s.sprints,0);
-    const topAll = Math.max(...soc.map(s=>s.top||0));
     document.getElementById('soccerSum').innerHTML =
       `共 <b>${soc.length}</b> 场 · 场均 <b>${(totM/soc.length/1000).toFixed(1)}K</b> · 冲刺合计 <b>${totSpr}</b> 次 · 极速纪录 <b>${topAll.toFixed(2)} m/s</b> · 数据来自赛后截图，教练手工录入`;
   } else { socPanel.style.display = 'none'; }
@@ -446,7 +569,9 @@ function render(d){
     document.getElementById('bodyNote').textContent = (bc.date||'') + ' · ' + (bc.src||'') + (bc.note ? ' — ' + bc.note : '');
   } else { bcEl.innerHTML = ''; document.getElementById('bodyNote').textContent = ''; }
 
-  document.getElementById('coach').textContent = d.coachNote || '';
+  document.getElementById('coach').textContent = '🧢 ' + (d.coachNote || '');
+  const av = document.getElementById('coachAvatar');
+  if (d.coachAvatar){ av.src = d.coachAvatar; av.style.display = ''; av.onerror = ()=>{ av.style.display='none'; }; }
 }
 
 render(SAMPLE);
