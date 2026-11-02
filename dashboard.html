@@ -236,31 +236,27 @@
 
 <script>
 const SAMPLE = {
-  "updatedAt": "2026-11-02 06:52",
-  "status": "赛后恢复 D8 · 冬训明天开营 · 静息心率飙至64（基线+9）· 昨夜仅睡4.5小时 · 复跑门槛未达标，跑步继续冻结",
-  "statusLevel": "alert",
+  "updatedAt": "2026-11-03 06:49",
+  "status": "赛后恢复 D9 · 冬训今日开营 · 静息心率回落至57（基线+2）· 睡眠回暖78分 · 复跑门槛差1天连续达标，跑步再冻结一天",
+  "statusLevel": "warn",
   "metrics": {
     "restingHR": {
-      "today": 64,
+      "today": 57,
       "baseline": 55,
-      "delta": 9
+      "delta": 2
     },
     "sleep": {
-      "score": 55,
-      "hours": 4.52
+      "score": 78,
+      "hours": 6.62
     },
     "vo2max": {
       "value": 48,
       "date": "10-25"
     },
     "weekKm": 0,
-    "stepsAvg": 9851
+    "stepsAvg": 9950
   },
   "rhrTrend": [
-    {
-      "date": "10-24",
-      "value": 57
-    },
     {
       "date": "10-25",
       "value": 55
@@ -295,15 +291,14 @@ const SAMPLE = {
     },
     {
       "date": "11-02",
-      "value": 64
+      "value": 62
+    },
+    {
+      "date": "11-03",
+      "value": 57
     }
   ],
   "sleepTrend": [
-    {
-      "date": "10-25",
-      "score": 83,
-      "hours": 7.1
-    },
     {
       "date": "10-26",
       "score": 56,
@@ -338,6 +333,16 @@ const SAMPLE = {
       "date": "11-01",
       "score": 55,
       "hours": 4.52
+    },
+    {
+      "date": "11-02",
+      "score": 60,
+      "hours": 5.88
+    },
+    {
+      "date": "11-03",
+      "score": 78,
+      "hours": 6.62
     }
   ],
   "weekVolume": [
@@ -379,14 +384,14 @@ const SAMPLE = {
       "day": "周一",
       "title": "完全休息",
       "done": true,
-      "note": "今日 · 休息 ✓",
-      "today": true
+      "note": "休息 ✓"
     },
     {
       "day": "周二",
       "title": "质量跑 · 冬训首课",
       "done": null,
-      "note": "心率未达标·冻结 · 跑前送髋激活8分钟"
+      "note": "心率未达标·冻结 · 跑前送髋激活8分钟",
+      "today": true
     },
     {
       "day": "周三",
@@ -422,7 +427,7 @@ const SAMPLE = {
   "nextRace": {
     "name": "PoweRun 半马（欢乐跑）",
     "date": "2027-01-03",
-    "daysLeft": 62,
+    "daysLeft": 61,
     "note": "不追成绩 · 当21K LSD用 · 起跑05:45 · 12/6深圳马(待抽签)如中签作超级LSD"
   },
   "recentRuns": [
@@ -605,8 +610,8 @@ const SAMPLE = {
   },
   "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
   "load": {
-    "ctl": 2.05,
-    "atl": 0.69,
+    "ctl": 2.0,
+    "atl": 0.59,
     "tsb": 1.4,
     "tsbTrend": [
       {
@@ -643,7 +648,7 @@ const SAMPLE = {
       }
     ]
   },
-  "coachNote": "教练：心率64，比基线高9跳，昨晚只睡4个半小时——身体在报警，不是撒娇。今天继续躺平，冬训明天开营，但心率不连续两天压回57以下，谁也别想跑。"
+  "coachNote": "教练：心率终于压回57，睡眠也回到78分——方向对了。但规矩就是规矩：连续两天57以下才复跑。今天冬训首课改下肢激活加拉伸，明天心率稳住再上跑道。"
 };
 
 function render(d){
