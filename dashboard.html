@@ -236,9 +236,9 @@
 
 <script>
 const SAMPLE = {
-  "updatedAt": "2026-11-03 06:49",
-  "status": "赛后恢复 D9 · 冬训今日开营 · 静息心率回落至57（基线+2）· 睡眠回暖78分 · 复跑门槛差1天连续达标，跑步再冻结一天",
-  "statusLevel": "warn",
+  "updatedAt": "2026-11-04 06:49",
+  "status": "赛后恢复 D10 · 冬训 D2 · 静息心率连续两天57达标 · 睡眠76分回暖 · 复跑解冻，周四轻松跑重启",
+  "statusLevel": "ok",
   "metrics": {
     "restingHR": {
       "today": 57,
@@ -246,21 +246,17 @@ const SAMPLE = {
       "delta": 2
     },
     "sleep": {
-      "score": 78,
-      "hours": 6.62
+      "score": 76,
+      "hours": 7.98
     },
     "vo2max": {
       "value": 48,
       "date": "10-25"
     },
     "weekKm": 0,
-    "stepsAvg": 9950
+    "stepsAvg": 8753
   },
   "rhrTrend": [
-    {
-      "date": "10-25",
-      "value": 55
-    },
     {
       "date": "10-26",
       "value": 59
@@ -296,14 +292,13 @@ const SAMPLE = {
     {
       "date": "11-03",
       "value": 57
+    },
+    {
+      "date": "11-04",
+      "value": 57
     }
   ],
   "sleepTrend": [
-    {
-      "date": "10-26",
-      "score": 56,
-      "hours": 4.73
-    },
     {
       "date": "10-27",
       "score": 77,
@@ -343,6 +338,11 @@ const SAMPLE = {
       "date": "11-03",
       "score": 78,
       "hours": 6.62
+    },
+    {
+      "date": "11-04",
+      "score": 76,
+      "hours": 7.98
     }
   ],
   "weekVolume": [
@@ -389,21 +389,21 @@ const SAMPLE = {
     {
       "day": "周二",
       "title": "质量跑 · 冬训首课",
-      "done": null,
-      "note": "心率未达标·冻结 · 跑前送髋激活8分钟",
-      "today": true
+      "done": false,
+      "note": "心率未达标·冻结 · 跑前送髋激活8分钟"
     },
     {
       "day": "周三",
       "title": "灵活日 · 下肢力量",
       "done": null,
-      "note": "无球·下肢力量"
+      "note": "无球·下肢力量",
+      "today": true
     },
     {
       "day": "周四",
       "title": "轻松跑",
       "done": null,
-      "note": "心率未达标·冻结 · 跑前送髋激活8分钟"
+      "note": "复跑达标·解冻 · 跑前送髋激活8分钟"
     },
     {
       "day": "周五",
@@ -415,7 +415,7 @@ const SAMPLE = {
       "day": "周六",
       "title": "LSD",
       "done": null,
-      "note": "心率未达标·冻结 · 跑前送髋激活8分钟"
+      "note": "跑前送髋激活8分钟"
     },
     {
       "day": "周日",
@@ -427,7 +427,7 @@ const SAMPLE = {
   "nextRace": {
     "name": "PoweRun 半马（欢乐跑）",
     "date": "2027-01-03",
-    "daysLeft": 61,
+    "daysLeft": 60,
     "note": "不追成绩 · 当21K LSD用 · 起跑05:45 · 12/6深圳马(待抽签)如中签作超级LSD"
   },
   "recentRuns": [
@@ -610,8 +610,8 @@ const SAMPLE = {
   },
   "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
   "load": {
-    "ctl": 2.0,
-    "atl": 0.59,
+    "ctl": 1.95,
+    "atl": 0.51,
     "tsb": 1.4,
     "tsbTrend": [
       {
@@ -648,7 +648,7 @@ const SAMPLE = {
       }
     ]
   },
-  "coachNote": "教练：心率终于压回57，睡眠也回到78分——方向对了。但规矩就是规矩：连续两天57以下才复跑。今天冬训首课改下肢激活加拉伸，明天心率稳住再上跑道。"
+  "coachNote": "教练：心率连续两天57，睡眠76分近8小时——复跑条件达标，解冻。周四轻松跑按课表来，跑前送髋激活8分钟别省，配速压住，冬训刚开营不欠这一下。"
 };
 
 function render(d){
