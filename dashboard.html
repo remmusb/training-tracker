@@ -236,31 +236,27 @@
 
 <script>
 const SAMPLE = {
-  "updatedAt": "2026-11-04 06:49",
-  "status": "赛后恢复 D10 · 冬训 D2 · 静息心率连续两天57达标 · 睡眠76分回暖 · 复跑解冻，周四轻松跑重启",
-  "statusLevel": "ok",
+  "updatedAt": "2026-11-05 06:55",
+  "status": "赛后恢复 D11 · 冬训 D3 · 静息心率63（基线+8）反弹 · 复跑门槛失守，周四轻松跑冻结，观察感冒是否反复",
+  "statusLevel": "warn",
   "metrics": {
     "restingHR": {
-      "today": 57,
+      "today": 63,
       "baseline": 55,
-      "delta": 2
+      "delta": 8
     },
     "sleep": {
       "score": 76,
       "hours": 7.98
     },
+    "weekKm": 0,
+    "stepsAvg": 8583,
     "vo2max": {
       "value": 48,
       "date": "10-25"
-    },
-    "weekKm": 0,
-    "stepsAvg": 8753
+    }
   },
   "rhrTrend": [
-    {
-      "date": "10-26",
-      "value": 59
-    },
     {
       "date": "10-27",
       "value": 60
@@ -296,6 +292,10 @@ const SAMPLE = {
     {
       "date": "11-04",
       "value": 57
+    },
+    {
+      "date": "11-05",
+      "value": 63
     }
   ],
   "sleepTrend": [
@@ -372,11 +372,11 @@ const SAMPLE = {
     },
     {
       "week": "10/26",
-      "km": 0.0
+      "km": 0
     },
     {
       "week": "11/2",
-      "km": 0.0
+      "km": 0
     }
   ],
   "weekPlan": [
@@ -395,15 +395,15 @@ const SAMPLE = {
     {
       "day": "周三",
       "title": "灵活日 · 下肢力量",
-      "done": null,
-      "note": "无球·下肢力量",
-      "today": true
+      "done": false,
+      "note": "无球·下肢力量 · 无训练记录"
     },
     {
       "day": "周四",
       "title": "轻松跑",
-      "done": null,
-      "note": "复跑达标·解冻 · 跑前送髋激活8分钟"
+      "done": false,
+      "note": "静息心率63·门槛失守·冻结 · 跑前送髋激活8分钟",
+      "today": true
     },
     {
       "day": "周五",
@@ -415,7 +415,7 @@ const SAMPLE = {
       "day": "周六",
       "title": "LSD",
       "done": null,
-      "note": "跑前送髋激活8分钟"
+      "note": "视心率恢复解冻 · 跑前送髋激活8分钟"
     },
     {
       "day": "周日",
@@ -427,7 +427,7 @@ const SAMPLE = {
   "nextRace": {
     "name": "PoweRun 半马（欢乐跑）",
     "date": "2027-01-03",
-    "daysLeft": 60,
+    "daysLeft": 59,
     "note": "不追成绩 · 当21K LSD用 · 起跑05:45 · 12/6深圳马(待抽签)如中签作超级LSD"
   },
   "recentRuns": [
@@ -610,9 +610,9 @@ const SAMPLE = {
   },
   "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
   "load": {
-    "ctl": 1.95,
-    "atl": 0.51,
-    "tsb": 1.4,
+    "ctl": 1.9,
+    "atl": 0.44,
+    "tsb": 1.5,
     "tsbTrend": [
       {
         "w": "9/15",
@@ -648,7 +648,7 @@ const SAMPLE = {
       }
     ]
   },
-  "coachNote": "教练：心率连续两天57，睡眠76分近8小时——复跑条件达标，解冻。周四轻松跑按课表来，跑前送髋激活8分钟别省，配速压住，冬训刚开营不欠这一下。"
+  "coachNote": "教练：静息心率一夜从57蹿到63，比基线高出8跳，睡眠76分近8小时也救不回这个信号——感冒八成没走干净。今天轻松跑冻结，跑休补觉多喝水，明早心率不回57以下，周六LSD照样别跑。"
 };
 
 function render(d){
