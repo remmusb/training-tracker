@@ -236,27 +236,27 @@
 
 <script>
 const SAMPLE = {
-  "updatedAt": "2026-11-06 06:49",
-  "status": "赛后恢复 D12 · 冬训 D4 · 静息心率57 连续4天≤57达标 · 复跑心率门槛达成，周六LSD解冻 · 昨夜睡眠53分仅5.4h偏弱，今日宜休养",
-  "statusLevel": "ok",
+  "updatedAt": "2026-11-07 06:50",
+  "status": "赛后恢复 D13 · 冬训 D5 · 今晨静息心率反弹62（基线+7）· 复跑门槛破坏 · 今日LSD继续冻结 · 前夜睡眠53分5.4h偏弱",
+  "statusLevel": "warn",
   "metrics": {
     "restingHR": {
-      "today": 57,
+      "today": 62,
       "baseline": 55,
-      "delta": 2
+      "delta": 7
     },
     "sleep": {
       "score": 53,
       "hours": 5.39
     },
+    "vo2max": {
+      "value": 48,
+      "date": "10-25"
+    },
     "weekKm": 0,
-    "stepsAvg": 8518
+    "stepsAvg": 9288
   },
   "rhrTrend": [
-    {
-      "date": "10-28",
-      "value": 61
-    },
     {
       "date": "10-29",
       "value": 59
@@ -292,6 +292,10 @@ const SAMPLE = {
     {
       "date": "11-06",
       "value": 57
+    },
+    {
+      "date": "11-07",
+      "value": 62
     }
   ],
   "sleepTrend": [
@@ -384,7 +388,7 @@ const SAMPLE = {
     },
     {
       "day": "周二",
-      "title": "质量跑 · 冬训首课",
+      "title": "质量跑",
       "done": false,
       "note": "心率门槛未满·冻结 · 跑前送髋激活8分钟"
     },
@@ -403,15 +407,15 @@ const SAMPLE = {
     {
       "day": "周五",
       "title": "上肢或休",
-      "done": null,
-      "note": "睡眠53分偏弱 · 建议直接休",
-      "today": true
+      "done": true,
+      "note": "睡眠53分偏弱 · 直接休息 ✓"
     },
     {
       "day": "周六",
       "title": "LSD",
       "done": null,
-      "note": "心率连续4天达标·解冻 · 跑前送髋激活8分钟"
+      "today": true,
+      "note": "今晨心率62门槛破坏·冻结 · 跑前送髋激活8分钟"
     },
     {
       "day": "周日",
@@ -423,7 +427,7 @@ const SAMPLE = {
   "nextRace": {
     "name": "PoweRun 半马（欢乐跑）",
     "date": "2027-01-03",
-    "daysLeft": 58,
+    "daysLeft": 57,
     "note": "不追成绩 · 当21K LSD用 · 起跑05:45 · 12/6深圳马(待抽签)如中签作超级LSD"
   },
   "recentRuns": [
@@ -463,6 +467,47 @@ const SAMPLE = {
       "hr": 157
     }
   ],
+  "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
+  "load": {
+    "ctl": 1.9,
+    "atl": 0.3,
+    "tsb": 1.5,
+    "tsbTrend": [
+      {
+        "w": "9/15",
+        "v": -2.1
+      },
+      {
+        "w": "9/22",
+        "v": -2.2
+      },
+      {
+        "w": "9/29",
+        "v": -2.2
+      },
+      {
+        "w": "10/6",
+        "v": -2.0
+      },
+      {
+        "w": "10/13",
+        "v": -0.3
+      },
+      {
+        "w": "10/20",
+        "v": -3.8
+      },
+      {
+        "w": "10/27",
+        "v": 0.3
+      },
+      {
+        "w": "11/2",
+        "v": 1.4
+      }
+    ]
+  },
+  "coachNote": "教练：心率连稳四天后今晨反弹到62，复跑门槛破了，今天LSD继续冻结。前晚只睡5个多小时53分，先补觉，别硬撑，等心率重新连稳两天再起跑。",
   "soccer": [
     {
       "date": "11-01",
@@ -603,48 +648,7 @@ const SAMPLE = {
       }
     ],
     "note": "短板：肌肉量 44.7kg（建议 45.1）· 腿部肌肉指数仅同龄人平均线 → 冬训下肢力量课重点观察，春季复测对比"
-  },
-  "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
-  "load": {
-    "ctl": 1.9,
-    "atl": 0.4,
-    "tsb": 1.5,
-    "tsbTrend": [
-      {
-        "w": "9/15",
-        "v": -2.1
-      },
-      {
-        "w": "9/22",
-        "v": -2.2
-      },
-      {
-        "w": "9/29",
-        "v": -2.2
-      },
-      {
-        "w": "10/6",
-        "v": -2.0
-      },
-      {
-        "w": "10/13",
-        "v": -0.3
-      },
-      {
-        "w": "10/20",
-        "v": -3.8
-      },
-      {
-        "w": "10/27",
-        "v": 0.3
-      },
-      {
-        "w": "11/2",
-        "v": 1.4
-      }
-    ]
-  },
-  "coachNote": "教练：心率连续四天稳在57，复跑门槛过了，周六LSD解冻。但昨晚53分只睡5个多小时，今天上肢课取消，专心补觉，明天慢跑起步别上强度。"
+  }
 };
 
 function render(d){
