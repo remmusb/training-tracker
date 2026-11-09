@@ -236,27 +236,26 @@
 
 <script>
 const SAMPLE = {
-  "updatedAt": "2026-11-09 06:50",
-  "status": "赛后恢复 D15 · 冬训 D7 · 今晨静息心率62（基线+7）连续两天超57门槛 · 复跑重新计时 · 本周跑步继续冻结 · 睡眠80分7.0h连升",
+  "updatedAt": "2026-11-10 06:51",
+  "status": "赛后恢复 D16 · 冬训 D8 · 今晨静息心率57回到门槛线 · 连续两天≤57未达成(昨日60) · 本周跑步继续冻结 · 睡眠76分6.9h回暖",
   "statusLevel": "warn",
   "metrics": {
     "restingHR": {
-      "today": 62,
+      "today": 57,
       "baseline": 55,
-      "delta": 7
+      "delta": 2
     },
     "sleep": {
-      "score": 80,
-      "hours": 7.04
+      "score": 76,
+      "hours": 6.91
     },
-    "weekKm": 0,
-    "stepsAvg": 10581
+    "vo2max": {
+      "value": 48,
+      "date": "10-25"
+    },
+    "weekKm": 0
   },
   "rhrTrend": [
-    {
-      "date": "10-31",
-      "value": 57
-    },
     {
       "date": "11-01",
       "value": 60
@@ -291,15 +290,14 @@ const SAMPLE = {
     },
     {
       "date": "11-09",
-      "value": 62
+      "value": 60
+    },
+    {
+      "date": "11-10",
+      "value": 57
     }
   ],
   "sleepTrend": [
-    {
-      "date": "11-01",
-      "score": 55,
-      "hours": 4.52
-    },
     {
       "date": "11-02",
       "score": 60,
@@ -334,13 +332,19 @@ const SAMPLE = {
       "date": "11-08",
       "score": 80,
       "hours": 7.04
+    },
+    {
+      "date": "11-09",
+      "score": 59,
+      "hours": 5.55
+    },
+    {
+      "date": "11-10",
+      "score": 76,
+      "hours": 6.91
     }
   ],
   "weekVolume": [
-    {
-      "week": "9/14",
-      "km": 27.1
-    },
     {
       "week": "9/21",
       "km": 26.0
@@ -368,21 +372,25 @@ const SAMPLE = {
     {
       "week": "11/2",
       "km": 0
+    },
+    {
+      "week": "11/9",
+      "km": 0
     }
   ],
   "weekPlan": [
     {
       "day": "周一",
       "title": "完全休息",
-      "done": null,
-      "today": true,
-      "note": "休息日 · 今晨心率62（+7）连续两天超门槛，复跑重新计时"
+      "done": true,
+      "note": "休息日 · 昨晨心率60(+5)未回门槛，复跑计时继续"
     },
     {
       "day": "周二",
       "title": "质量跑",
       "done": null,
-      "note": "心率门槛未满·暂冻结 · 跑前送髋激活8分钟"
+      "today": true,
+      "note": "心率门槛未满·暂冻结(今晨57，需连续两天≤57) · 跑前送髋激活8分钟"
     },
     {
       "day": "周三",
@@ -418,7 +426,7 @@ const SAMPLE = {
   "nextRace": {
     "name": "PoweRun 半马（欢乐跑）",
     "date": "2027-01-03",
-    "daysLeft": 55,
+    "daysLeft": 54,
     "note": "不追成绩 · 当21K LSD用 · 起跑05:45 · 12/6深圳马(待抽签)如中签作超级LSD"
   },
   "recentRuns": [
@@ -459,7 +467,7 @@ const SAMPLE = {
     }
   ],
   "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
-  "coachNote": "教练：心率62又顶在高位，连续两天破门槛，复跑计时归零，本周跑步继续冻结没商量。好消息是睡眠80分7小时连涨两天，身体在回血——别手痒，把觉睡够就是训练。",
+  "coachNote": "教练：心率57终于落回门槛线，但规矩是连续两天——昨天60，今天才第一天，复跑计时重新起算，本周跑步继续冻结没商量。睡眠76分近7小时在回血，把觉睡稳，明天心率守住57就离解冻近一步。",
   "soccer": [
     {
       "date": "11-01",
@@ -602,8 +610,8 @@ const SAMPLE = {
     "note": "短板：肌肉量 44.7kg（建议 45.1）· 腿部肌肉指数仅同龄人平均线 → 冬训下肢力量课重点观察，春季复测对比"
   },
   "load": {
-    "ctl": 1.6,
-    "atl": 0.1,
+    "ctl": 1.56,
+    "atl": 0.09,
     "tsb": 1.5,
     "tsbTrend": [
       {
