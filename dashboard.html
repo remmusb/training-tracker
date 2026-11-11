@@ -236,14 +236,14 @@
 
 <script>
 const SAMPLE = {
-  "updatedAt": "2026-11-11 06:49",
-  "status": "赛后恢复 D17 · 冬训 D9 · 昨晚复跑测试6K均心率141压线达标 · 今晨静息心率60反弹(+5) · 连续两天≤57未达成 · 睡眠53分仅4.2h · 跑步继续冻结",
+  "updatedAt": "2026-11-12 06:11",
+  "status": "冬训 W1 D3 · 复跑测试已过 · 今晨静息心率62再创新高(+7) · 睡眠仅4.2h连续欠账 · 今日轻松跑建议降档休息",
   "statusLevel": "warn",
   "metrics": {
     "restingHR": {
-      "today": 60,
+      "today": 62,
       "baseline": 55,
-      "delta": 5
+      "delta": 7
     },
     "sleep": {
       "score": 53,
@@ -254,13 +254,9 @@ const SAMPLE = {
       "date": "11-10"
     },
     "weekKm": 6.0,
-    "stepsAvg": 10346
+    "stepsAvg": 10667
   },
   "rhrTrend": [
-    {
-      "date": "11-02",
-      "value": 62
-    },
     {
       "date": "11-03",
       "value": 57
@@ -296,14 +292,13 @@ const SAMPLE = {
     {
       "date": "11-11",
       "value": 60
+    },
+    {
+      "date": "11-12",
+      "value": 62
     }
   ],
   "sleepTrend": [
-    {
-      "date": "11-03",
-      "score": 78,
-      "hours": 6.62
-    },
     {
       "date": "11-04",
       "score": 76,
@@ -384,38 +379,38 @@ const SAMPLE = {
       "day": "周一",
       "title": "完全休息",
       "done": true,
-      "note": "休息日 · 晨心率60未回门槛，复跑计时中断"
+      "note": "休息日 · 已执行"
     },
     {
       "day": "周二",
-      "title": "质量跑",
+      "title": "复跑测试",
       "done": true,
-      "note": "实际复跑测试6.0K · 均心率141≤145达标 · 跑前送髋激活8分钟"
+      "note": "实际6.0K · 均心率141≤145达标 · 跑前送髋激活8分钟"
     },
     {
       "day": "周三",
-      "title": "灵活日 · 下肢力量",
-      "done": null,
-      "today": true,
-      "note": "无球·下肢力量 · 睡眠仅4.2h，减量进行"
+      "title": "灵活日 · 改休息",
+      "done": true,
+      "note": "睡眠欠债，本周灵活日改休息 · 已执行"
     },
     {
       "day": "周四",
-      "title": "轻松跑",
+      "title": "轻松跑 6K + 80m×4",
       "done": null,
-      "note": "心率门槛未满·暂冻结(今晨60，需连续两天≤57) · 跑前送髋激活8分钟"
+      "today": true,
+      "note": "今晨静息62>58 · 建议降档休息 · 如跑：跑前送髋激活8分钟"
     },
     {
       "day": "周五",
-      "title": "上肢或休",
+      "title": "上肢力量或休",
       "done": null,
       "note": "视睡眠疲劳定"
     },
     {
       "day": "周六",
-      "title": "LSD",
+      "title": "LSD 12K",
       "done": null,
-      "note": "心率门槛未满·暂冻结 · 跑前送髋激活8分钟"
+      "note": "有球改周日不叠加 · 跑前送髋激活8分钟"
     },
     {
       "day": "周日",
@@ -427,7 +422,7 @@ const SAMPLE = {
   "nextRace": {
     "name": "PoweRun 半马（欢乐跑）",
     "date": "2027-01-03",
-    "daysLeft": 53,
+    "daysLeft": 52,
     "note": "不追成绩 · 当21K LSD用 · 起跑05:45 · 12/6深圳马(待抽签)如中签作超级LSD"
   },
   "recentRuns": [
@@ -467,8 +462,6 @@ const SAMPLE = {
       "hr": 144
     }
   ],
-  "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
-  "coachNote": "教练：昨晚6K测试心率压得不错，但今晨心率弹回60、睡眠只有4小时——身体还没接住负荷。规矩不变：连续两天≤57才解冻，今天下肢力量照常做，跑步继续冻结，先把觉睡回来。",
   "soccer": [
     {
       "date": "11-01",
@@ -610,10 +603,12 @@ const SAMPLE = {
     ],
     "note": "短板：肌肉量 44.7kg（建议 45.1）· 腿部肌肉指数仅同龄人平均线 → 冬训下肢力量课重点观察，春季复测对比"
   },
+  "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
+  "coachNote": "教练：心率连着往上走，62是这波最高，觉又只睡了4小时——身体在跟你讨债。今天的课该放就放，别硬顶，先把觉补够，心率下来了跑啥都顺。",
   "load": {
-    "ctl": 1.63,
-    "atl": 0.8,
-    "tsb": 0.8,
+    "ctl": 1.55,
+    "atl": 0.59,
+    "tsb": 1.0,
     "tsbTrend": [
       {
         "w": "9/22",
