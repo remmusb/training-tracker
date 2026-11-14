@@ -236,31 +236,27 @@
 
 <script>
 const SAMPLE = {
-  "updatedAt": "2026-11-14 06:51",
-  "status": "冬训 W1 D7 · 周六 LSD 日 · 昨日静息58回落至门槛线(+3)、睡眠5.8h仍偏少 · 今日12K轻松慢跑，控速控心率",
-  "statusLevel": "ok",
+  "updatedAt": "2026-11-15 06:50",
+  "status": "冬训 W1 D7 · 周日足球日 · 静息63创近10天新高(+8)、连续4天超58门槛 · 睡眠6.9h回暖 · 今日收着踢，不适就早退",
+  "statusLevel": "alert",
   "metrics": {
     "restingHR": {
-      "today": 58,
+      "today": 63,
       "baseline": 55,
-      "delta": 3
+      "delta": 8
     },
     "sleep": {
-      "score": 70,
-      "hours": 5.81
+      "score": 75,
+      "hours": 6.92
     },
     "vo2max": {
       "value": 49,
       "date": "11-10"
     },
     "weekKm": 6.0,
-    "stepsAvg": 12282
+    "stepsAvg": 11446
   },
   "rhrTrend": [
-    {
-      "date": "11-05",
-      "value": 57
-    },
     {
       "date": "11-06",
       "value": 57
@@ -292,6 +288,14 @@ const SAMPLE = {
     {
       "date": "11-13",
       "value": 58
+    },
+    {
+      "date": "11-14",
+      "value": 59
+    },
+    {
+      "date": "11-15",
+      "value": 63
     }
   ],
   "sleepTrend": [
@@ -334,6 +338,11 @@ const SAMPLE = {
       "date": "11-13",
       "score": 70,
       "hours": 5.81
+    },
+    {
+      "date": "11-14",
+      "score": 75,
+      "hours": 6.92
     }
   ],
   "weekVolume": [
@@ -404,21 +413,21 @@ const SAMPLE = {
     {
       "day": "周六",
       "title": "LSD 12K",
-      "done": null,
-      "today": true,
-      "note": "有球改周日不叠加 · 跑前送髋激活8分钟 · 睡眠仍偏少，压心率慢摇"
+      "done": false,
+      "note": "无跑步记录 · 未执行（有球改周日不叠加）"
     },
     {
       "day": "周日",
       "title": "足球",
       "done": null,
-      "note": "联赛日 · 量力而行，别当强度课"
+      "today": true,
+      "note": "联赛日 · 静息63超门槛，量力而行别当强度课，不适就早退"
     }
   ],
   "nextRace": {
     "name": "PoweRun 半马（欢乐跑）",
     "date": "2027-01-03",
-    "daysLeft": 50,
+    "daysLeft": 49,
     "note": "不追成绩 · 当21K LSD用 · 起跑05:45 · 12/6深圳马(待抽签)如中签作超级LSD"
   },
   "recentRuns": [
@@ -600,11 +609,11 @@ const SAMPLE = {
     "note": "短板：肌肉量 44.7kg（建议 45.1）· 腿部肌肉指数仅同龄人平均线 → 冬训下肢力量课重点观察，春季复测对比"
   },
   "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
-  "coachNote": "教练：心率从60回到58，TSB转正，身体在回血——今天12K就一个字：慢。晚上早睡把觉攒够，明天踢球才有劲。",
+  "coachNote": "教练：静息63是这十天最高的，连续四天挂在门槛上，身体在亮黄灯——昨晚睡了6.9小时算回了口血，今天球照踢但收着点，冲刺留一半，晚上十点前睡，先把心率摁回去。",
   "load": {
-    "ctl": 1.57,
-    "atl": 1.15,
-    "tsb": 0.4,
+    "ctl": 1.53,
+    "atl": 0.99,
+    "tsb": 0.5,
     "tsbTrend": [
       {
         "w": "9/22",
