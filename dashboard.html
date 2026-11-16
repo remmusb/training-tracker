@@ -236,14 +236,14 @@
 
 <script>
 const SAMPLE = {
-  "updatedAt": "2026-11-16 10:09",
-  "status": "冬训 W2 D1 · 周一休息日 · 静息61反弹超58门槛(+6) · 睡眠5.4h/61分一般 · 今日彻底休息，晚上早睡把心率摁回基线",
+  "updatedAt": "2026-11-17 06:50",
+  "status": "冬训 W2 D2 · 周二复跑测试日 · 静息59(+4)仍超58门槛 · 睡眠5.4h/61分欠债未还 · 建议今日降档休息，心率回到58以下再补测",
   "statusLevel": "warn",
   "metrics": {
     "restingHR": {
-      "today": 61,
+      "today": 59,
       "baseline": 55,
-      "delta": 6
+      "delta": 4
     },
     "sleep": {
       "score": 61,
@@ -254,13 +254,9 @@ const SAMPLE = {
       "date": "11-10"
     },
     "weekKm": 0,
-    "stepsAvg": 10116
+    "stepsAvg": 9923
   },
   "rhrTrend": [
-    {
-      "date": "11-07",
-      "value": 58
-    },
     {
       "date": "11-08",
       "value": 60
@@ -296,14 +292,13 @@ const SAMPLE = {
     {
       "date": "11-16",
       "value": 61
+    },
+    {
+      "date": "11-17",
+      "value": 59
     }
   ],
   "sleepTrend": [
-    {
-      "date": "11-08",
-      "score": 80,
-      "hours": 7.04
-    },
     {
       "date": "11-09",
       "score": 59,
@@ -343,6 +338,11 @@ const SAMPLE = {
       "date": "11-16",
       "score": 61,
       "hours": 5.38
+    },
+    {
+      "date": "11-17",
+      "score": null,
+      "hours": null
     }
   ],
   "weekVolume": [
@@ -383,15 +383,15 @@ const SAMPLE = {
     {
       "day": "周一",
       "title": "完全休息",
-      "done": null,
-      "today": true,
-      "note": "休息日 · 静息61>58、睡眠仅5.4h，正好彻底休息，晚上十点前睡"
+      "done": true,
+      "note": "休息日 · 无训练安排，静息61高位下彻底休息执行到位"
     },
     {
       "day": "周二",
       "title": "复跑测试",
       "done": null,
-      "note": "跑前送髋激活8分钟 · 心率≤145控速；晨起静息仍>58则降档休息"
+      "today": true,
+      "note": "跑前送髋激活8分钟 · 今日静息59>58、睡眠仍欠债，建议降档休息，心率回到58以下再补测"
     },
     {
       "day": "周三",
@@ -427,7 +427,7 @@ const SAMPLE = {
   "nextRace": {
     "name": "PoweRun 半马（欢乐跑）",
     "date": "2027-01-03",
-    "daysLeft": 48,
+    "daysLeft": 47,
     "note": "不追成绩 · 当21K LSD用 · 起跑05:45 · 12/6深圳马(待抽签)如中签作超级LSD"
   },
   "recentRuns": [
@@ -636,11 +636,11 @@ const SAMPLE = {
     "note": "短板：肌肉量 44.7kg（建议 45.1）· 腿部肌肉指数仅同龄人平均线 → 冬训下肢力量课重点观察，春季复测对比"
   },
   "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
-  "coachNote": "教练：静息从55弹回61，昨晚只睡了5个多小时，身体还在打晃——好在今天本来就是休息日，别惦记加练，多喝水、晚上十点前睡，明早先看心率再动。",
+  "coachNote": "教练：静息从61回到59，方向对了但还在门槛上，昨晚又只睡5个多小时——睡眠债不还清，心率就摁不住。今晚十点半前上床，别的都不急。",
   "load": {
-    "ctl": 1.49,
-    "atl": 0.85,
-    "tsb": 0.6,
+    "ctl": 1.45,
+    "atl": 0.73,
+    "tsb": 0.7,
     "tsbTrend": [
       {
         "w": "9/29",
