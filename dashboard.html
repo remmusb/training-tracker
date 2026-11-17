@@ -236,31 +236,27 @@
 
 <script>
 const SAMPLE = {
-  "updatedAt": "2026-11-17 09:15",
-  "status": "冬训 W2 D2 · 静息55回基线(+0) · 睡眠85分/6.8h满血复活 · 今早没跑挪到今晚：质量跑8K+短冲，21点前收工",
-  "statusLevel": "ok",
+  "updatedAt": "2026-11-18 07:51",
+  "status": "冬训 W2 D3 · 睡眠38分/4.0h严重欠债 · 静息59超基线+4 · 今天灵活日降档全休，补觉优先，课表顺延不硬顶",
+  "statusLevel": "warn",
   "metrics": {
     "restingHR": {
-      "today": 55,
+      "today": 59,
       "baseline": 55,
-      "delta": 0
+      "delta": 4
     },
     "sleep": {
-      "score": 85,
-      "hours": 6.83
+      "score": 38,
+      "hours": 3.95
     },
     "vo2max": {
       "value": 49,
       "date": "11-10"
     },
     "weekKm": 0,
-    "stepsAvg": 9923
+    "stepsAvg": 10004
   },
   "rhrTrend": [
-    {
-      "date": "11-08",
-      "value": 60
-    },
     {
       "date": "11-09",
       "value": 60
@@ -296,14 +292,13 @@ const SAMPLE = {
     {
       "date": "11-17",
       "value": 55
+    },
+    {
+      "date": "11-18",
+      "value": 59
     }
   ],
   "sleepTrend": [
-    {
-      "date": "11-09",
-      "score": 59,
-      "hours": 5.55
-    },
     {
       "date": "11-10",
       "score": 76,
@@ -343,6 +338,11 @@ const SAMPLE = {
       "date": "11-17",
       "score": 85,
       "hours": 6.83
+    },
+    {
+      "date": "11-18",
+      "score": 38,
+      "hours": 3.95
     }
   ],
   "weekVolume": [
@@ -384,20 +384,20 @@ const SAMPLE = {
       "day": "周一",
       "title": "完全休息",
       "done": true,
-      "note": "休息日 · 无训练安排，静息61高位下彻底休息执行到位"
+      "note": "休息日 · 无训练安排，执行到位"
     },
     {
       "day": "周二",
       "title": "质量跑8K+短冲",
-      "done": null,
-      "today": true,
-      "note": "今晚有事→顺延周三晨（前提周三无球）· 心率≤155 · 跑前送髋激活8分钟"
+      "done": false,
+      "note": "未执行 · 不补课，本周课表顺延"
     },
     {
       "day": "周三",
       "title": "灵活日",
       "done": null,
-      "note": "有球→足球，无球→下肢力量 · 睡眠仍欠债则继续改休息"
+      "today": true,
+      "note": "有球→足球，无球→下肢力量 · 睡眠3.9h严重欠债+静息59超线，今天降档彻底休息"
     },
     {
       "day": "周四",
@@ -427,7 +427,7 @@ const SAMPLE = {
   "nextRace": {
     "name": "PoweRun 半马（欢乐跑）",
     "date": "2027-01-03",
-    "daysLeft": 47,
+    "daysLeft": 46,
     "note": "不追成绩 · 当21K LSD用 · 起跑05:45 · 12/6深圳马(待抽签)如中签作超级LSD"
   },
   "recentRuns": [
@@ -636,11 +636,11 @@ const SAMPLE = {
     "note": "短板：肌肉量 44.7kg（建议 45.1）· 腿部肌肉指数仅同龄人平均线 → 冬训下肢力量课重点观察，春季复测对比"
   },
   "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
-  "coachNote": "教练：静息回到55基线，睡眠85分——病彻底翻篇了。就是闹钟没打赢被窝，课挪到今晚：8K+短冲，21点前收工，别熬夜。",
+  "coachNote": "教练：睡了不到4小时、静息又抬到59，身体在要账了。今天别惦记训练，踏踏实实补觉，睡够了课表自然会回来。",
   "load": {
-    "ctl": 1.45,
-    "atl": 0.73,
-    "tsb": 0.7,
+    "ctl": 1.42,
+    "atl": 0.63,
+    "tsb": 0.8,
     "tsbTrend": [
       {
         "w": "9/29",
