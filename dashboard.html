@@ -236,18 +236,18 @@
 
 <script>
 const SAMPLE = {
-  "updatedAt": "2026-11-18 07:51",
-  "status": "冬训 W2 D3 · 睡眠38分/4.0h严重欠债 · 静息59超基线+4 · 今天灵活日降档全休，补觉优先，课表顺延不硬顶",
+  "updatedAt": "2026-11-21 07:49",
+  "status": "冬训 W2 D6 · 静息62超基线+7 · 睡眠5.6h/68分平平 · 今天LSD日但身体在要账，建议降档别硬顶",
   "statusLevel": "warn",
   "metrics": {
     "restingHR": {
-      "today": 59,
+      "today": 62,
       "baseline": 55,
-      "delta": 4
+      "delta": 7
     },
     "sleep": {
-      "score": 38,
-      "hours": 3.95
+      "score": 68,
+      "hours": 5.55
     },
     "vo2max": {
       "value": 49,
@@ -257,14 +257,6 @@ const SAMPLE = {
     "stepsAvg": 10004
   },
   "rhrTrend": [
-    {
-      "date": "11-09",
-      "value": 60
-    },
-    {
-      "date": "11-10",
-      "value": 57
-    },
     {
       "date": "11-11",
       "value": 60
@@ -296,19 +288,17 @@ const SAMPLE = {
     {
       "date": "11-18",
       "value": 59
+    },
+    {
+      "date": "11-19",
+      "value": 58
+    },
+    {
+      "date": "11-20",
+      "value": 62
     }
   ],
   "sleepTrend": [
-    {
-      "date": "11-10",
-      "score": 76,
-      "hours": 6.91
-    },
-    {
-      "date": "11-11",
-      "score": 53,
-      "hours": 4.22
-    },
     {
       "date": "11-12",
       "score": 70,
@@ -343,6 +333,16 @@ const SAMPLE = {
       "date": "11-18",
       "score": 38,
       "hours": 3.95
+    },
+    {
+      "date": "11-19",
+      "score": 77,
+      "hours": 7.18
+    },
+    {
+      "date": "11-20",
+      "score": 68,
+      "hours": 5.55
     }
   ],
   "weekVolume": [
@@ -388,34 +388,34 @@ const SAMPLE = {
     },
     {
       "day": "周二",
-      "title": "质量跑8K+短冲",
-      "done": false,
-      "note": "未执行 · 不补课，本周课表顺延"
+      "title": "复跑测试",
+      "done": true,
+      "note": "已于11-10通过（6.0K · 均心141 ≤145 达标）· 冬训开营依据，本周不重复"
     },
     {
       "day": "周三",
       "title": "灵活日",
-      "done": null,
-      "today": true,
-      "note": "有球→足球，无球→下肢力量 · 睡眠3.9h严重欠债+静息59超线，今天降档彻底休息"
+      "done": true,
+      "note": "有球→足球，无球→下肢力量 · 本周因睡眠欠债改休息，已执行"
     },
     {
       "day": "周四",
       "title": "轻松跑 6K + 80m×4",
-      "done": null,
-      "note": "跑前送髋激活8分钟 · 轻松跑6K + 加速跑80m×4"
+      "done": false,
+      "note": "跑前送髋激活8分钟 · 轻松跑6K+加速跑80m×4 · 未执行，不补课，课表顺延"
     },
     {
       "day": "周五",
       "title": "上肢力量或休",
-      "done": null,
-      "note": "看恢复情况执行，疲劳就休"
+      "done": true,
+      "note": "看恢复选择休息 · 当天静息62偏高，休息是正确选项"
     },
     {
       "day": "周六",
       "title": "LSD 12K",
       "done": null,
-      "note": "跑前送髋激活8分钟 · 有球改周日，不叠加"
+      "today": true,
+      "note": "跑前送髋激活8分钟 · 有球改周日不叠加 · 静息62超58门槛+睡眠平平，建议降档休息或缩短到6-8K慢摇"
     },
     {
       "day": "周日",
@@ -427,7 +427,7 @@ const SAMPLE = {
   "nextRace": {
     "name": "PoweRun 半马（欢乐跑）",
     "date": "2027-01-03",
-    "daysLeft": 46,
+    "daysLeft": 43,
     "note": "不追成绩 · 当21K LSD用 · 起跑05:45 · 12/6深圳马(待抽签)如中签作超级LSD"
   },
   "recentRuns": [
@@ -636,11 +636,11 @@ const SAMPLE = {
     "note": "短板：肌肉量 44.7kg（建议 45.1）· 腿部肌肉指数仅同龄人平均线 → 冬训下肢力量课重点观察，春季复测对比"
   },
   "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
-  "coachNote": "教练：睡了不到4小时、静息又抬到59，身体在要账了。今天别惦记训练，踏踏实实补觉，睡够了课表自然会回来。",
+  "coachNote": "教练：静息连着三天挂在基线上方、昨晚只睡5个半钟，恢复还没结清。课表照走没问题，但强度一定听身体的——感觉发沉就果断收，睡够睡好才是这周的主课。",
   "load": {
-    "ctl": 1.42,
-    "atl": 0.63,
-    "tsb": 0.8,
+    "ctl": 1.32,
+    "atl": 0.4,
+    "tsb": 0.9,
     "tsbTrend": [
       {
         "w": "9/29",
