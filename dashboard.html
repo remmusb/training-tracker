@@ -236,9 +236,9 @@
 
 <script>
 const SAMPLE = {
-  "updatedAt": "2026-11-21 07:49",
-  "status": "冬训 W2 D6 · 静息62超基线+7 · 睡眠5.6h/68分平平 · 今天LSD日但身体在要账，建议降档别硬顶",
-  "statusLevel": "warn",
+  "updatedAt": "2026-11-22 07:50",
+  "status": "冬训 W1 D7 · 睡眠几乎没记录到（0.05h/15分）· 静息62超基线+7 · 今天足球日，身体在报警，量力而行别硬顶",
+  "statusLevel": "alert",
   "metrics": {
     "restingHR": {
       "today": 62,
@@ -246,25 +246,17 @@ const SAMPLE = {
       "delta": 7
     },
     "sleep": {
-      "score": 68,
-      "hours": 5.55
+      "score": 15,
+      "hours": 0.05
     },
     "vo2max": {
       "value": 49,
       "date": "11-10"
     },
     "weekKm": 0,
-    "stepsAvg": 10004
+    "stepsAvg": 7742
   },
   "rhrTrend": [
-    {
-      "date": "11-11",
-      "value": 60
-    },
-    {
-      "date": "11-12",
-      "value": 60
-    },
     {
       "date": "11-13",
       "value": 58
@@ -296,19 +288,17 @@ const SAMPLE = {
     {
       "date": "11-20",
       "value": 62
+    },
+    {
+      "date": "11-21",
+      "value": 59
+    },
+    {
+      "date": "11-22",
+      "value": 62
     }
   ],
   "sleepTrend": [
-    {
-      "date": "11-12",
-      "score": 70,
-      "hours": 6.63
-    },
-    {
-      "date": "11-13",
-      "score": 70,
-      "hours": 5.81
-    },
     {
       "date": "11-14",
       "score": 75,
@@ -343,6 +333,16 @@ const SAMPLE = {
       "date": "11-20",
       "score": 68,
       "hours": 5.55
+    },
+    {
+      "date": "11-21",
+      "score": 65,
+      "hours": 5.45
+    },
+    {
+      "date": "11-22",
+      "score": 15,
+      "hours": 0.05
     }
   ],
   "weekVolume": [
@@ -413,21 +413,21 @@ const SAMPLE = {
     {
       "day": "周六",
       "title": "LSD 12K",
-      "done": null,
-      "today": true,
-      "note": "跑前送髋激活8分钟 · 有球改周日不叠加 · 静息62超58门槛+睡眠平平，建议降档休息或缩短到6-8K慢摇"
+      "done": false,
+      "note": "跑前送髋激活8分钟 · 有球改周日不叠加 · 睡眠5.45h欠债+静息偏高，主动降档休息，未跑不算逃练"
     },
     {
       "day": "周日",
       "title": "足球",
       "done": null,
-      "note": "联赛日 · 量力而行，不适就早退"
+      "today": true,
+      "note": "联赛日 · 睡眠几乎没记录到（0.05h/15分）+静息62超58门槛，量力而行，不适就早退"
     }
   ],
   "nextRace": {
     "name": "PoweRun 半马（欢乐跑）",
     "date": "2027-01-03",
-    "daysLeft": 43,
+    "daysLeft": 42,
     "note": "不追成绩 · 当21K LSD用 · 起跑05:45 · 12/6深圳马(待抽签)如中签作超级LSD"
   },
   "recentRuns": [
@@ -636,10 +636,10 @@ const SAMPLE = {
     "note": "短板：肌肉量 44.7kg（建议 45.1）· 腿部肌肉指数仅同龄人平均线 → 冬训下肢力量课重点观察，春季复测对比"
   },
   "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
-  "coachNote": "教练：静息连着三天挂在基线上方、昨晚只睡5个半钟，恢复还没结清。课表照走没问题，但强度一定听身体的——感觉发沉就果断收，睡够睡好才是这周的主课。",
+  "coachNote": "教练：昨晚几乎没睡记录到，静息还挂在62，恢复账越欠越多。今天的球量力而行，感觉发沉就早点下来——这周啥课都没有把觉补够重要。",
   "load": {
-    "ctl": 1.32,
-    "atl": 0.4,
+    "ctl": 1.29,
+    "atl": 0.34,
     "tsb": 0.9,
     "tsbTrend": [
       {
