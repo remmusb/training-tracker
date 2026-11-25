@@ -236,18 +236,18 @@
 
 <script>
 const SAMPLE = {
-  "updatedAt": "2026-11-24 07:48",
-  "status": "冬训 W1 · 静息64连续四天高位（基线+9）· 睡眠仍欠债（5.1h/51分）· 今日降档，继续主动休息",
+  "updatedAt": "2026-11-26 07:49",
+  "status": "冬训 W1 · 静息65创近十天新高（基线+10）· 睡眠回暖（7.0h/75分）· 今日轻松跑建议降档休息",
   "statusLevel": "warn",
   "metrics": {
     "restingHR": {
-      "today": 64,
+      "today": 65,
       "baseline": 55,
-      "delta": 9
+      "delta": 10
     },
     "sleep": {
-      "score": 51,
-      "hours": 5.07
+      "score": 75,
+      "hours": 6.97
     },
     "weekKm": 0,
     "stepsAvg": 7131,
@@ -257,14 +257,6 @@ const SAMPLE = {
     }
   },
   "rhrTrend": [
-    {
-      "date": "11-15",
-      "value": 55
-    },
-    {
-      "date": "11-16",
-      "value": 61
-    },
     {
       "date": "11-17",
       "value": 55
@@ -295,20 +287,18 @@ const SAMPLE = {
     },
     {
       "date": "11-24",
-      "value": 64
+      "value": 63
+    },
+    {
+      "date": "11-25",
+      "value": 58
+    },
+    {
+      "date": "11-26",
+      "value": 65
     }
   ],
   "sleepTrend": [
-    {
-      "date": "11-16",
-      "score": 61,
-      "hours": 5.38
-    },
-    {
-      "date": "11-17",
-      "score": 85,
-      "hours": 6.83
-    },
     {
       "date": "11-18",
       "score": 38,
@@ -340,7 +330,19 @@ const SAMPLE = {
       "hours": 5.07
     },
     {
-      "date": "11-24"
+      "date": "11-24",
+      "score": 68,
+      "hours": 5.2
+    },
+    {
+      "date": "11-25",
+      "score": 77,
+      "hours": 7.13
+    },
+    {
+      "date": "11-26",
+      "score": 75,
+      "hours": 6.97
     }
   ],
   "weekVolume": [
@@ -388,20 +390,20 @@ const SAMPLE = {
       "day": "周二",
       "title": "复跑测试",
       "done": true,
-      "today": true,
-      "note": "已于11-10通过（6.0K · 均心141 ≤145 达标）· 今日静息64超58，降档休息不补课，先还睡眠债"
+      "note": "已于11-10通过（6.0K · 均心141 ≤145 达标）· 周二静息63超58，未补课，继续还睡眠债"
     },
     {
       "day": "周三",
       "title": "灵活日",
-      "done": null,
-      "note": "有球→足球，无球→下肢力量 · 本周因睡眠欠债改休息"
+      "done": true,
+      "note": "本周因睡眠欠债改休息 · 已执行 · 静息回落到58，睡眠7.1h/77分，回血中"
     },
     {
       "day": "周四",
       "title": "轻松跑 6K + 80m×4",
       "done": null,
-      "note": "跑前送髋激活8分钟 · 轻松跑6K+加速跑80m×4 · 心率盯≤150"
+      "today": true,
+      "note": "跑前送髋激活8分钟 · 轻松跑6K+加速跑80m×4 · 心率盯≤150 · 今日静息65超58，建议降档休息"
     },
     {
       "day": "周五",
@@ -425,7 +427,7 @@ const SAMPLE = {
   "nextRace": {
     "name": "PoweRun 半马（欢乐跑）",
     "date": "2027-01-03",
-    "daysLeft": 40,
+    "daysLeft": 38,
     "note": "不追成绩 · 当21K LSD用 · 起跑05:45 · 12/6深圳马(待抽签)如中签作超级LSD"
   },
   "recentRuns": [
@@ -643,10 +645,9 @@ const SAMPLE = {
     "note": "短板：肌肉量 44.7kg（建议 45.1）· 腿部肌肉指数仅同龄人平均线 → 冬训下肢力量课重点观察，春季复测对比"
   },
   "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
-  "coachNote": "教练：静息64还在往上顶，连着四天高位，昨晚那5小时觉根本没把债还上。今天继续老实休息，别惦记补课，睡饱了周四的轻松跑自然有质量。",
   "load": {
-    "ctl": 1.23,
-    "atl": 0.25,
+    "ctl": 1.17,
+    "atl": 0.18,
     "tsb": 1.0,
     "tsbTrend": [
       {
@@ -682,7 +683,8 @@ const SAMPLE = {
         "v": 1.0
       }
     ]
-  }
+  },
+  "coachNote": "教练：静息一下窜到65，近十天最高，黄牌亮着了。昨晚那7小时觉是好事，但还不够。今天的轻松跑别硬顶，改成彻底休息或散步拉伸，把心率压回58以下，课表跑不了，身体是自己的。"
 };
 
 function render(d){
