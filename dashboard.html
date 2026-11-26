@@ -236,31 +236,27 @@
 
 <script>
 const SAMPLE = {
-  "updatedAt": "2026-11-26 07:49",
-  "status": "冬训 W1 · 静息65创近十天新高（基线+10）· 睡眠回暖（7.0h/75分）· 今日轻松跑建议降档休息",
-  "statusLevel": "warn",
+  "updatedAt": "2026-11-27 07:50",
+  "status": "冬训 W1 · 静息回落至58（基线+3）· 睡眠6.97h/75分 · 今日周五轻上肢或休，周六LSD 12K待命",
+  "statusLevel": "ok",
   "metrics": {
     "restingHR": {
-      "today": 65,
+      "today": 58,
       "baseline": 55,
-      "delta": 10
+      "delta": 3
     },
     "sleep": {
       "score": 75,
       "hours": 6.97
     },
     "weekKm": 0,
-    "stepsAvg": 7131,
+    "stepsAvg": 8005,
     "vo2max": {
       "value": 49,
       "date": "11-10"
     }
   },
   "rhrTrend": [
-    {
-      "date": "11-17",
-      "value": 55
-    },
     {
       "date": "11-18",
       "value": 59
@@ -295,15 +291,10 @@ const SAMPLE = {
     },
     {
       "date": "11-26",
-      "value": 65
+      "value": 58
     }
   ],
   "sleepTrend": [
-    {
-      "date": "11-18",
-      "score": 38,
-      "hours": 3.95
-    },
     {
       "date": "11-19",
       "score": 77,
@@ -396,20 +387,20 @@ const SAMPLE = {
       "day": "周三",
       "title": "灵活日",
       "done": true,
-      "note": "本周因睡眠欠债改休息 · 已执行 · 静息回落到58，睡眠7.1h/77分，回血中"
+      "note": "本周因睡眠欠债改休息 · 已执行 · 静息回落到58，睡眠7.1h/77分，回血到位"
     },
     {
       "day": "周四",
       "title": "轻松跑 6K + 80m×4",
-      "done": null,
-      "today": true,
-      "note": "跑前送髋激活8分钟 · 轻松跑6K+加速跑80m×4 · 心率盯≤150 · 今日静息65超58，建议降档休息"
+      "done": false,
+      "note": "跑前送髋激活8分钟 · 未执行 · 连续回血优先，跳过本周轻松跑，状态留给周六LSD"
     },
     {
       "day": "周五",
       "title": "上肢力量或休",
       "done": null,
-      "note": "看恢复选择 · 静息仍高就继续休"
+      "today": true,
+      "note": "看恢复选择 · 静息58回到基线+3，可做轻上肢或继续休，别上量"
     },
     {
       "day": "周六",
@@ -427,7 +418,7 @@ const SAMPLE = {
   "nextRace": {
     "name": "PoweRun 半马（欢乐跑）",
     "date": "2027-01-03",
-    "daysLeft": 38,
+    "daysLeft": 37,
     "note": "不追成绩 · 当21K LSD用 · 起跑05:45 · 12/6深圳马(待抽签)如中签作超级LSD"
   },
   "recentRuns": [
@@ -646,8 +637,8 @@ const SAMPLE = {
   },
   "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
   "load": {
-    "ctl": 1.17,
-    "atl": 0.18,
+    "ctl": 1.14,
+    "atl": 0.15,
     "tsb": 1.0,
     "tsbTrend": [
       {
@@ -684,7 +675,7 @@ const SAMPLE = {
       }
     ]
   },
-  "coachNote": "教练：静息一下窜到65，近十天最高，黄牌亮着了。昨晚那7小时觉是好事，但还不够。今天的轻松跑别硬顶，改成彻底休息或散步拉伸，把心率压回58以下，课表跑不了，身体是自己的。"
+  "coachNote": "教练：静息从63一路回到58，睡眠也稳在7小时边上，这几天的债基本还清了。今天别加量，轻上肢或者干脆休，把劲儿留给周六那堂12K，跑前8分钟送髋激活别偷懒。"
 };
 
 function render(d){
