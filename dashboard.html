@@ -236,31 +236,27 @@
 
 <script>
 const SAMPLE = {
-  "updatedAt": "2026-11-27 07:50",
-  "status": "冬训 W1 · 静息回落至58（基线+3）· 睡眠6.97h/75分 · 今日周五轻上肢或休，周六LSD 12K待命",
-  "statusLevel": "ok",
+  "updatedAt": "2026-11-28 07:49",
+  "status": "冬训 W1 · 周六 · 睡眠4.4h/46分连续两晚<5h · 静息60超58门槛 · 今晨5K已跑（均心150偏高），今日降档休息补觉",
+  "statusLevel": "alert",
   "metrics": {
     "restingHR": {
-      "today": 58,
+      "today": 60,
       "baseline": 55,
-      "delta": 3
+      "delta": 5
     },
     "sleep": {
-      "score": 75,
-      "hours": 6.97
+      "score": 46,
+      "hours": 4.38
     },
-    "weekKm": 0,
-    "stepsAvg": 8005,
     "vo2max": {
-      "value": 49,
-      "date": "11-10"
-    }
+      "value": 48,
+      "date": "11-28"
+    },
+    "weekKm": 5.0,
+    "stepsAvg": 8349
   },
   "rhrTrend": [
-    {
-      "date": "11-18",
-      "value": 59
-    },
     {
       "date": "11-19",
       "value": 58
@@ -292,14 +288,17 @@ const SAMPLE = {
     {
       "date": "11-26",
       "value": 58
+    },
+    {
+      "date": "11-27",
+      "value": 64
+    },
+    {
+      "date": "11-28",
+      "value": 60
     }
   ],
   "sleepTrend": [
-    {
-      "date": "11-19",
-      "score": 77,
-      "hours": 7.18
-    },
     {
       "date": "11-20",
       "score": 68,
@@ -334,6 +333,16 @@ const SAMPLE = {
       "date": "11-26",
       "score": 75,
       "hours": 6.97
+    },
+    {
+      "date": "11-27",
+      "score": 40,
+      "hours": 4.13
+    },
+    {
+      "date": "11-28",
+      "score": 46,
+      "hours": 4.38
     }
   ],
   "weekVolume": [
@@ -367,7 +376,7 @@ const SAMPLE = {
     },
     {
       "week": "11/23",
-      "km": 0
+      "km": 5.0
     }
   ],
   "weekPlan": [
@@ -375,53 +384,60 @@ const SAMPLE = {
       "day": "周一",
       "title": "完全休息",
       "done": true,
-      "note": "休息日 · 无跑步活动，执行到位 · 静息62仍偏高，休对了"
+      "note": "休息日 · 无跑步活动，执行到位 · 静息62偏高，休对了"
     },
     {
       "day": "周二",
       "title": "复跑测试",
       "done": true,
-      "note": "已于11-10通过（6.0K · 均心141 ≤145 达标）· 周二静息63超58，未补课，继续还睡眠债"
+      "note": "跑前送髋激活8分钟 · 已于11-10通过（6.0K · 均心141 ≤145 达标）· 本周二静息63未补课，继续还睡眠债"
     },
     {
       "day": "周三",
       "title": "灵活日",
       "done": true,
-      "note": "本周因睡眠欠债改休息 · 已执行 · 静息回落到58，睡眠7.1h/77分，回血到位"
+      "note": "本周因睡眠欠债改休息 · 已执行 · 当日静息回落至58，回血见效"
     },
     {
       "day": "周四",
       "title": "轻松跑 6K + 80m×4",
       "done": false,
-      "note": "跑前送髋激活8分钟 · 未执行 · 连续回血优先，跳过本周轻松跑，状态留给周六LSD"
+      "note": "跑前送髋激活8分钟 · 未执行 · 连续回血优先，跳过本周轻松跑"
     },
     {
       "day": "周五",
       "title": "上肢力量或休",
-      "done": null,
-      "today": true,
-      "note": "看恢复选择 · 静息58回到基线+3，可做轻上肢或继续休，别上量"
+      "done": true,
+      "note": "选择休息 · 无训练记录 · 当夜睡眠崩至4.1h/40分，休对了"
     },
     {
       "day": "周六",
       "title": "LSD 12K",
-      "done": null,
-      "note": "跑前送髋激活8分钟 · 有球改周日，不叠加 · 轻松配速完成即可"
+      "done": true,
+      "today": true,
+      "note": "跑前送髋激活8分钟 · 今晨已跑5.0K（6'35\" · 均心150偏高）· 睡眠4.4h<5h + 静息60>58双警报，12K降档不补，今天休息补觉"
     },
     {
       "day": "周日",
       "title": "足球",
       "done": null,
-      "note": "联赛日 · 若周六已跑LSD则量力而行"
+      "note": "联赛日 · 本周睡眠债重，量力而行，可踢半场省着用"
     }
   ],
   "nextRace": {
     "name": "PoweRun 半马（欢乐跑）",
     "date": "2027-01-03",
-    "daysLeft": 37,
+    "daysLeft": 36,
     "note": "不追成绩 · 当21K LSD用 · 起跑05:45 · 12/6深圳马(待抽签)如中签作超级LSD"
   },
   "recentRuns": [
+    {
+      "date": "11-28",
+      "name": "浦东新区 晨跑 5K",
+      "km": 5.0,
+      "pace": "6'35\"",
+      "hr": 150
+    },
     {
       "date": "11-10",
       "name": "复跑测试 5K · 心率≤145",
@@ -449,13 +465,6 @@ const SAMPLE = {
       "km": 15.5,
       "pace": "6'50\"",
       "hr": 151
-    },
-    {
-      "date": "10-14",
-      "name": "W7 周二 · 轻松跑 8K",
-      "km": 8.8,
-      "pace": "6'22\"",
-      "hr": 144
     }
   ],
   "soccer": [
@@ -637,9 +646,9 @@ const SAMPLE = {
   },
   "coachAvatar": "https://remmusb.github.io/training-tracker/coach.jpg",
   "load": {
-    "ctl": 1.14,
-    "atl": 0.15,
-    "tsb": 1.0,
+    "ctl": 1.23,
+    "atl": 0.84,
+    "tsb": 0.4,
     "tsbTrend": [
       {
         "w": "10/6",
@@ -675,7 +684,7 @@ const SAMPLE = {
       }
     ]
   },
-  "coachNote": "教练：静息从63一路回到58，睡眠也稳在7小时边上，这几天的债基本还清了。今天别加量，轻上肢或者干脆休，把劲儿留给周六那堂12K，跑前8分钟送髋激活别偷懒。"
+  "coachNote": "教练：连续两晚只睡4个多小时，静息又顶回60，身体在亮红灯了。今晨那5K心率150就是信号——没缓过来。今明两天彻底休息补觉、咖啡减半，课表不差这一天，睡够了下周再正常跑。"
 };
 
 function render(d){
